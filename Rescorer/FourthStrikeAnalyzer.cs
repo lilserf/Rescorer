@@ -30,6 +30,10 @@ namespace Rescorer
 
 		public bool isStrikeout(IEnumerable<char> pitchList)
 		{
+			// Temporary while the API doesn't have the pitch list
+			if (pitchList == null)
+				return true;
+
 			int strikes = 0;
 			foreach(var pitch in pitchList)
 			{
@@ -62,7 +66,7 @@ namespace Rescorer
 				// This batter should have struck out!
 				if(curr.totalStrikes >= 3 && curr.eventType != "STRIKEOUT")
 				{
-					if (isStrikeout(curr.pitchesList))
+					if (isStrikeout(curr.pitches))
 					{
 						curr.eventType = "STRIKEOUT";
 						curr.totalStrikes = 3;
@@ -118,7 +122,7 @@ namespace Rescorer
 			int index = 0;
 			foreach(var e in combined)
 			{
-				e.eventIndex = index;
+				//e.eventIndex = index;
 				index++;
 			}
 

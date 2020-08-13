@@ -118,12 +118,78 @@ namespace Rescorer
 			}
 		}
 
+
+		struct Summary
+		{
+			public int inning;
+			public bool topOfInning;
+			public int outs;
+			public string type;
+			public string batterId;
+			public int eventId;
+
+			public override string ToString()
+			{
+				string topbot = topOfInning ? "Top" : "Bot";
+				return $"{eventId}: {topbot}{inning+1}, {outs} out\t{type,20}";
+			}
+		}
+
+		class Inning
+		{
+			public List<Summary> awayBefore;
+			public List<Summary> homeBefore;
+			public List<Summary> awayAfter;
+			public List<Summary> homeAfter;
+
+			public Inning()
+			{
+				awayBefore = new List<Summary>();
+				homeBefore = new List<Summary>();
+				awayAfter = new List<Summary>();
+				homeAfter = new List<Summary>();
+			}
+			public void Add(Summary s, bool after=false)
+			{
+				if(after)
+				{
+					if (s.topOfInning)
+						awayAfter.Add(s);
+					else
+						homeAfter.Add(s);
+				}
+				else
+				{
+					if (s.topOfInning)
+						awayBefore.Add(s);
+					else
+						homeBefore.Add(s);
+				}
+			}
+		}
+
+		private Summary MakeSummary(GameEvent e)
+		{
+			return new Summary { eventId = e.eventIndex, inning = e.inning, topOfInning=e.topOfInning, outs = e.outsBeforePlay, type = e.eventType, batterId = e.batterId };
+		}
+
 		public void Run(string gameId)
 		{
 			IEnumerable<GameEvent> events = FetchGame(gameId).GetAwaiter().GetResult();
 			var sorted = events.OrderBy(x => x.eventIndex);
 
-			using (FileStream s = new FileStream("before.rescore", FileMode.Create))
+			// UGLY but works
+			Dictionary<int, Inning> innings = new Dictionary<int, Inning>();
+			foreach(var e in sorted)
+			{
+				if(!innings.ContainsKey(e.inning))
+				{
+					innings[e.inning] = new Inning();
+				}
+				innings[e.inning].Add(MakeSummary(e));
+			}
+
+			using (FileStream s = new FileStream("before.json", FileMode.Create))
 			{
 				using (Utf8JsonWriter writer = new Utf8JsonWriter(s))
 				{
@@ -134,13 +200,48 @@ namespace Rescorer
 			FourthStrikeAnalyzer fsa = new FourthStrikeAnalyzer();
 			var newEvents = fsa.RescoreGame(sorted);
 
-			using(FileStream s = new FileStream("after.rescore", FileMode.Create))
+			using(FileStream s = new FileStream("after.json", FileMode.Create))
 			{
 				using (Utf8JsonWriter writer = new Utf8JsonWriter(s))
 				{
 					JsonSerializer.Serialize<IEnumerable<GameEvent>>(writer, newEvents, new JsonSerializerOptions() { PropertyNamingPolicy = new SnakeCaseNamingPolicy(), WriteIndented = true });
 				}
 			}
+
+			foreach (var e in newEvents)
+			{
+				if (!innings.ContainsKey(e.inning))
+				{
+					innings[e.inning] = new Inning();
+				}
+				innings[e.inning].Add(MakeSummary(e), true);
+			}
+
+			using (StreamWriter s = new StreamWriter("rescore.diff"))
+			{
+				foreach(var inningNum in innings.Keys.OrderBy(x => x))
+				{
+					s.WriteLine($"========================================  Inning {inningNum+1} =======================================");
+					Inning inning = innings[inningNum];
+					int numLines = Math.Max(inning.awayBefore.Count, inning.awayAfter.Count);
+					for(int lineNum = 0; lineNum < numLines; lineNum++)
+					{
+						string before = (lineNum < inning.awayBefore.Count) ? inning.awayBefore[lineNum].ToString() : "";
+						string after = (lineNum < inning.awayAfter.Count) ? inning.awayAfter[lineNum].ToString() : "";
+						s.WriteLine($"{before,40} | {after,40}");
+					}
+					s.WriteLine();
+					s.WriteLine();
+					numLines = Math.Max(inning.homeBefore.Count, inning.homeAfter.Count);
+					for (int lineNum = 0; lineNum < numLines; lineNum++)
+					{
+						string before = (lineNum < inning.homeBefore.Count) ? inning.homeBefore[lineNum].ToString() : "";
+						string after = (lineNum < inning.homeAfter.Count) ? inning.homeAfter[lineNum].ToString() : "";
+						s.WriteLine($"{before,40} | {after,40}");
+					}
+				}
+			}
+
 		}
 	}
 }

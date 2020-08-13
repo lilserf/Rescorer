@@ -46,7 +46,7 @@ namespace Rescorer
 		public int homeStrikeCount { get; set; }
 		public int awayStrikeCount { get; set; }
 		public int batterCount { get; set; }
-		public IEnumerable<char> pitchesList { get; set; }
+		public IEnumerable<char> pitches { get; set; }
 		public int totalStrikes { get; set; }
 		public int totalBalls { get; set; }
 		public int totalFouls { get; set; }
@@ -75,6 +75,7 @@ namespace Rescorer
 		public bool isWalk { get; set; }
 		public IEnumerable<PlayerEvent> playerEvents { get; set; }
 
+		public int id { get; set; }
 		public override string ToString()
 		{
 			string topbot = topOfInning ? "Top" : "Bot";
