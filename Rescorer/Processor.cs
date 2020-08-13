@@ -127,11 +127,12 @@ namespace Rescorer
 			public string type;
 			public string batterId;
 			public int eventId;
+			public int dbId;
 
 			public override string ToString()
 			{
 				string topbot = topOfInning ? "Top" : "Bot";
-				return $"{eventId}: {topbot}{inning+1}, {outs} out\t{type,20}";
+				return $"{dbId} [{eventId}]: {topbot}{inning+1}, {outs} out\t{type,16}";
 			}
 		}
 
@@ -170,7 +171,7 @@ namespace Rescorer
 
 		private Summary MakeSummary(GameEvent e)
 		{
-			return new Summary { eventId = e.eventIndex, inning = e.inning, topOfInning=e.topOfInning, outs = e.outsBeforePlay, type = e.eventType, batterId = e.batterId };
+			return new Summary { dbId = e.id, eventId = e.eventIndex, inning = e.inning, topOfInning=e.topOfInning, outs = e.outsBeforePlay, type = e.eventType, batterId = e.batterId };
 		}
 
 		public void Run(string gameId)
@@ -178,7 +179,7 @@ namespace Rescorer
 			IEnumerable<GameEvent> events = FetchGame(gameId).GetAwaiter().GetResult();
 			var sorted = events.OrderBy(x => x.eventIndex);
 
-			// UGLY but works
+			// UGLY but works, sorry
 			Dictionary<int, Inning> innings = new Dictionary<int, Inning>();
 			foreach(var e in sorted)
 			{

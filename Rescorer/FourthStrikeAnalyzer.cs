@@ -122,7 +122,7 @@ namespace Rescorer
 			int index = 0;
 			foreach(var e in combined)
 			{
-				//e.eventIndex = index;
+				e.eventIndex = index;
 				index++;
 			}
 
