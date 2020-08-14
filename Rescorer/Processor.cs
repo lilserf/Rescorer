@@ -132,7 +132,7 @@ namespace Rescorer
 			public override string ToString()
 			{
 				string topbot = topOfInning ? "Top" : "Bot";
-				return $"{dbId} [{eventId}]: {topbot}{inning+1}, {outs} out\t{type,16}";
+				return $"{dbId,6} [{eventId,3}]: {topbot}{inning+1,2}, {outs} out  {type,16}";
 			}
 		}
 
@@ -177,7 +177,7 @@ namespace Rescorer
 		public void Run(string gameId)
 		{
 			IEnumerable<GameEvent> events = FetchGame(gameId).GetAwaiter().GetResult();
-			var sorted = events.OrderBy(x => x.eventIndex);
+			var sorted = events.OrderBy(x => x.eventIndex).OrderBy(x => x.outsBeforePlay).OrderBy(x => x.inning);
 
 			// UGLY but works, sorry
 			Dictionary<int, Inning> innings = new Dictionary<int, Inning>();
@@ -220,16 +220,18 @@ namespace Rescorer
 
 			using (StreamWriter s = new StreamWriter("rescore.diff"))
 			{
+				string header = $"DBID   EIDX   INNING                   EVENT";
+				s.WriteLine($"{header}   {header}");
 				foreach(var inningNum in innings.Keys.OrderBy(x => x))
 				{
-					s.WriteLine($"========================================  Inning {inningNum+1} =======================================");
+					s.WriteLine($"========================================== Inning {inningNum+1} ========================================");
 					Inning inning = innings[inningNum];
 					int numLines = Math.Max(inning.awayBefore.Count, inning.awayAfter.Count);
 					for(int lineNum = 0; lineNum < numLines; lineNum++)
 					{
 						string before = (lineNum < inning.awayBefore.Count) ? inning.awayBefore[lineNum].ToString() : "";
 						string after = (lineNum < inning.awayAfter.Count) ? inning.awayAfter[lineNum].ToString() : "";
-						s.WriteLine($"{before,40} | {after,40}");
+						s.WriteLine($"{before,45} | {after,45}");
 					}
 					s.WriteLine();
 					s.WriteLine();
@@ -238,7 +240,7 @@ namespace Rescorer
 					{
 						string before = (lineNum < inning.homeBefore.Count) ? inning.homeBefore[lineNum].ToString() : "";
 						string after = (lineNum < inning.homeAfter.Count) ? inning.homeAfter[lineNum].ToString() : "";
-						s.WriteLine($"{before,40} | {after,40}");
+						s.WriteLine($"{before,45} | {after,45}");
 					}
 				}
 			}
