@@ -295,6 +295,7 @@ namespace Rescorer
 				{
 					// Track baserunners
 					// TODO: handle steals
+					// TODO: record runs
 					switch (curr.basesHit)
 					{
 						case 4:
@@ -319,8 +320,6 @@ namespace Rescorer
 				// TODO check for double play validity?
 				// Now increment the outs and/or innings
 				addOuts(curr.outsOnPlay);
-
-				// TODO baserunners
 			}
 
 			return events;
