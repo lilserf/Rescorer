@@ -177,7 +177,7 @@ namespace Rescorer
 		public void Run(string gameId)
 		{
 			IEnumerable<GameEvent> events = FetchGame(gameId).GetAwaiter().GetResult();
-			var sorted = events.OrderBy(x => x.eventIndex).OrderBy(x => x.outsBeforePlay).OrderBy(x => x.inning);
+			var sorted = events.OrderBy(x => x.eventIndex).OrderBy(x => x.outsBeforePlay).OrderBy(x => !x.topOfInning).OrderBy(x => x.inning);
 
 			// UGLY but works, sorry
 			Dictionary<int, Inning> innings = new Dictionary<int, Inning>();
@@ -221,10 +221,10 @@ namespace Rescorer
 			using (StreamWriter s = new StreamWriter("rescore.diff"))
 			{
 				string header = $"DBID   EIDX   INNING                   EVENT";
-				s.WriteLine($"{header}   {header}");
+				s.WriteLine($" {header}    {header}");
 				foreach(var inningNum in innings.Keys.OrderBy(x => x))
 				{
-					s.WriteLine($"========================================== Inning {inningNum+1} ========================================");
+					s.WriteLine($"========================================== Inning {inningNum+1} =========================================");
 					Inning inning = innings[inningNum];
 					int numLines = Math.Max(inning.awayBefore.Count, inning.awayAfter.Count);
 					for(int lineNum = 0; lineNum < numLines; lineNum++)
