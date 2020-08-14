@@ -205,7 +205,11 @@ namespace Rescorer
 			{
 				using (Utf8JsonWriter writer = new Utf8JsonWriter(s))
 				{
-					JsonSerializer.Serialize<IEnumerable<GameEvent>>(writer, newEvents, new JsonSerializerOptions() { PropertyNamingPolicy = new SnakeCaseNamingPolicy(), WriteIndented = true });
+					var options = new JsonSerializerOptions();
+					options.PropertyNamingPolicy = new SnakeCaseNamingPolicy();
+					options.WriteIndented = true;
+
+					JsonSerializer.Serialize<IEnumerable<GameEvent>>(writer, newEvents, options);
 				}
 			}
 

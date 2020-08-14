@@ -21,16 +21,21 @@ namespace Rescorer
 	{
 		int m_inning = 0;
 		int m_outs = 0;
+		int m_score = 0;
+		bool m_isHome = false;
 
 		Baserunner[] m_bases;
 
+
 		const int BASE_ADVANCE = 2;
 
-		public SingleTeamFourthStrikeAnalyzer()
+		public SingleTeamFourthStrikeAnalyzer(bool isHome)
 		{
 			m_inning = 0;
 			m_outs = 0;
 			m_bases = new Baserunner[4];
+			m_score = 0;
+			m_isHome = isHome;
 		}
 
 		public bool addOuts(int outs)
@@ -113,6 +118,7 @@ namespace Rescorer
 				{
 					var geb = CreateGebr(m_bases[i].playerId, m_bases[i].pitcherId, i, 4);
 					runners.Add(geb);
+					m_score++;
 				}
 			}
 			m_bases[1] = null;
@@ -122,6 +128,7 @@ namespace Rescorer
 
 			// Also record the batter scoring
 			putBatterOnBase(curr, 4);
+			m_score++;
 		}
 
 		public void handleTriple(GameEvent curr)
@@ -134,6 +141,7 @@ namespace Rescorer
 				{
 					var geb = CreateGebr(m_bases[i].playerId, m_bases[i].pitcherId, i, 4);
 					runners.Add(geb);
+					m_score++;
 				}
 			}
 			m_bases[1] = null;
@@ -155,6 +163,7 @@ namespace Rescorer
 				{
 					var geb = CreateGebr(m_bases[i].playerId, m_bases[i].pitcherId, i, 4);
 					runners.Add(geb);
+					m_score++;
 				}
 			}
 			m_bases[1] = null;
@@ -176,6 +185,7 @@ namespace Rescorer
 				{
 					var geb = CreateGebr(m_bases[i].playerId, m_bases[i].pitcherId, i, 4);
 					runners.Add(geb);
+					m_score++;
 				}
 			}
 			m_bases[2] = null;
@@ -187,6 +197,11 @@ namespace Rescorer
 				int newBase = 1 + BASE_ADVANCE;
 				var whosOnFirst = CreateGebr(m_bases[1].playerId, m_bases[1].pitcherId, 1, newBase);
 				runners.Add(whosOnFirst);
+
+				if(newBase == 4)
+				{
+					m_score++;
+				}
 
 				if (newBase > 0 && newBase < 4)
 				{
@@ -220,23 +235,28 @@ namespace Rescorer
 		{
 			Baserunner[] newBases = new Baserunner[4];
 			Baserunner scored = null;
+			int[] prevBases = new int[4];
 
 			if(m_bases[1] != null)
 			{
 				newBases[2] = m_bases[1];
+				prevBases[2] = 1;
 			}
 			else
 			{
 				newBases[2] = m_bases[2];
+				prevBases[2] = 2;
 			}
 
 			if(m_bases[1] != null && m_bases[2] != null)
 			{
 				newBases[3] = m_bases[2];
+				prevBases[3] = 2;
 			}
 			else
 			{
 				newBases[3] = m_bases[3];
+				prevBases[3] = 3;
 			}
 
 			if(m_bases[1] != null && m_bases[2] != null && m_bases[3] != null)
@@ -246,6 +266,7 @@ namespace Rescorer
 			else
 			{
 				newBases[3] = m_bases[3];
+				prevBases[3] = 3;
 			}
 
 			List<GameEventBaseRunner> runners = new List<GameEventBaseRunner>();
@@ -253,14 +274,103 @@ namespace Rescorer
 			{
 				if(newBases[i] != null)
 				{
-					runners.Add(CreateGebr(newBases[i].playerId, newBases[i].pitcherId, i - 1, i));
+					runners.Add(CreateGebr(newBases[i].playerId, newBases[i].pitcherId, prevBases[i], i));
 				}
 
 				m_bases[i] = newBases[i];
 			}
+			if(scored != null)
+			{
+				runners.Add(CreateGebr(scored.playerId, scored.pitcherId, 3, 4));
+				m_score++;
+			}
+
 			curr.baseRunners = runners;
 
 			putBatterOnBase(curr, 1);
+		}
+
+		public void handleFieldersChoice(GameEvent curr)
+		{
+			// Figure out who's out
+			Baserunner whosOut = null;
+			if(m_bases[1] != null && m_bases[2] != null && m_bases[3] != null)
+			{
+				whosOut = m_bases[3];
+				m_bases[3] = null;
+			}
+			else if(m_bases[1] != null && m_bases[2] != null)
+			{
+				whosOut = m_bases[2];
+				m_bases[2] = null;
+			}
+			else if(m_bases[1] != null)
+			{
+				whosOut = m_bases[1];
+				m_bases[1] = null;
+			}
+			else
+			{
+				curr.eventType = "OUT";
+			}
+
+			Baserunner scored = null;
+			// Move the non-out folks and put the batter on first
+			if(m_bases[3] != null && curr.outsBeforePlay < 2)
+			{
+				// If there's a runner on 3rd they'll score
+				scored = m_bases[3];
+			}
+			m_bases[3] = m_bases[2];
+			m_bases[2] = m_bases[1];
+			if (whosOut != null)
+			{
+				// Except if whosOut is null, it's the batter who's out
+				m_bases[1] = new Baserunner(curr.batterId, curr.pitcherId);
+			}
+			
+
+			// Build GEBRs
+			List<GameEventBaseRunner> runners = new List<GameEventBaseRunner>();
+			for(int i = 0; i < 4; i++)
+			{
+				if (m_bases[i] != null)
+				{
+					var gebr = CreateGebr(m_bases[i].playerId, m_bases[i].pitcherId, i-1, i);
+					runners.Add(gebr);
+				}
+			}
+			if(scored != null)
+			{
+				// Only scoring from 3rd on fielder's choice
+				runners.Add(CreateGebr(scored.playerId, scored.pitcherId, 3, 4));
+				m_score++;
+			}
+			curr.baseRunners = runners;
+
+			// Make sure there's an out on this play
+			curr.outsOnPlay = 1;
+		}
+
+		// Handle hits and track baserunners
+		private void handleHit(GameEvent curr)
+		{
+			// TODO: handle steals
+			switch (curr.basesHit)
+			{
+				case 4:
+					handleHomerun(curr);
+					break;
+				case 3:
+					handleTriple(curr);
+					break;
+				case 2:
+					handleDouble(curr);
+					break;
+				case 1:
+					handleSingle(curr);
+					break;
+			}
 		}
 
 		public IEnumerable<GameEvent> Rescore(IEnumerable<GameEvent> events)
@@ -270,13 +380,19 @@ namespace Rescorer
 				// First set the correct current inning and outs
 				curr.inning = m_inning;
 				curr.outsBeforePlay = m_outs;
+				// And score
+				if (m_isHome)
+					curr.homeScore = m_score;
+				else
+					curr.awayScore = m_score;
+
 
 				// This batter should have struck out!
-				if(curr.totalStrikes >= 3 && curr.eventType != "STRIKEOUT")
+				if (curr.totalStrikes >= 3 && curr.eventType != GameEventType.STRIKEOUT)
 				{
 					if (isStrikeout(curr.pitches))
 					{
-						curr.eventType = "STRIKEOUT";
+						curr.eventType = GameEventType.STRIKEOUT;
 						curr.totalStrikes = 3;
 						curr.basesHit = 0;
 						curr.isSacrificeHit = false;
@@ -285,41 +401,35 @@ namespace Rescorer
 					}
 				}
 
-				// TODO handle fielder's choice
 				// TODO handle sacrifice
-				if (curr.eventType == "WALK")
+				switch (curr.eventType)
 				{
-					handleWalk(curr);
-				}
-				else
-				{
-					// Track baserunners
-					// TODO: handle steals
-					// TODO: record runs
-					switch (curr.basesHit)
-					{
-						case 4:
-							handleHomerun(curr);
-							break;
-						case 3:
-							handleTriple(curr);
-							break;
-						case 2:
-							handleDouble(curr);
-							break;
-						case 1:
-							handleSingle(curr);
-							break;
-						case 0:
-						default:
-							handleNoHit(curr);
-							break;
-					}
+					case GameEventType.FIELDERS_CHOICE:
+						handleFieldersChoice(curr);
+						break;
+					case GameEventType.WALK:
+						handleWalk(curr);
+						break;
+					case GameEventType.HOME_RUN:
+					case GameEventType.TRIPLE:
+					case GameEventType.DOUBLE:
+					case GameEventType.SINGLE:
+						handleHit(curr);
+						break;
+					default:
+						handleNoHit(curr);
+						break;
 				}
 
 				// TODO check for double play validity?
 				// Now increment the outs and/or innings
-				addOuts(curr.outsOnPlay);
+				var inningEnded = addOuts(curr.outsOnPlay);
+
+				// BOOO this is actually matching lousy behavior in Cauldron, somebody should really fix that:/
+				if(inningEnded)
+				{
+					curr.baseRunners = new List<GameEventBaseRunner>();
+				}
 			}
 
 			return events;
@@ -334,10 +444,9 @@ namespace Rescorer
 
 		public FourthStrikeAnalyzer()
 		{
-			m_home = new SingleTeamFourthStrikeAnalyzer();
-			m_away = new SingleTeamFourthStrikeAnalyzer();
+			m_home = new SingleTeamFourthStrikeAnalyzer(true);
+			m_away = new SingleTeamFourthStrikeAnalyzer(false);
 		}
-
 
 		public IEnumerable<GameEvent> RescoreGame(IEnumerable<GameEvent> events)
 		{
@@ -355,6 +464,8 @@ namespace Rescorer
 			// Combine home and away and sort
 			var combined = newHomeEvents.Concat(newAwayEvents).ToList();
 			combined.Sort(SortGameEvents);
+
+			// TODO: Each analyzer is going to adjust only the score for the team it's handling, so the all the HOME batting events have the wrong AWAY score and vice versa
 
 			// Re-index after sorting
 			int index = 0;

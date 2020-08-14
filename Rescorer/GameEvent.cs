@@ -4,6 +4,28 @@ using System.Text;
 
 namespace Rescorer
 {
+	public static class GameEventType
+	{
+		public const string UNKNOWN = "UNKNOWN";
+		public const string NONE = "NONE";
+		public const string OUT = "OUT";
+		public const string STRIKEOUT = "STRIKEOUT";
+		public const string STOLEN_BASE = "STOLEN_BASE";
+		public const string CAUGHT_STEALING = "CAUGHT_STEALING";
+		public const string PICKOFF = "PICKOFF";
+		public const string WILD_PITCH = "WILD_PITCH";
+		public const string BALK = "BALK";
+		public const string OTHER_ADVANCE = "OTHER_ADVANCE";
+		public const string WALK = "WALK";
+		public const string INTENTIONAL_WALK = "INTENTIONAL_WALK";
+		public const string HIT_BY_PITCH = "HIT_BY_PITCH";
+		public const string FIELDERS_CHOICE = "FIELDERS_CHOICE";
+		public const string SINGLE = "SINGLE";
+		public const string DOUBLE = "DOUBLE";
+		public const string TRIPLE = "TRIPLE";
+		public const string HOME_RUN = "HOME_RUN";
+	}
+
 	/// <summary>
 	/// Player events
 	/// </summary>
