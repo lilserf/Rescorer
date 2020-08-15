@@ -23,10 +23,14 @@ namespace Rescorer
 		int m_outs = 0;
 		int m_score = 0;
 		bool m_isHome = false;
-
+		// Have we entered an alternate reality?
+		bool m_alternateReality = false;
+		// Quick bookkeeping of base runners
 		Baserunner[] m_bases;
 
-
+		// Should we change runners in the "reality" phase before we've diverged?
+		// Useful for debugging, but should be turned off for real analysis so that games can only diverge after a fourth strike change
+		static bool s_changeRunnersInReality = false;
 		const int BASE_ADVANCE = 2;
 
 		public SingleTeamFourthStrikeAnalyzer(bool isHome)
@@ -96,6 +100,14 @@ namespace Rescorer
 			};
 		}
 
+		private void storeRunners(GameEvent curr, IEnumerable<GameEventBaseRunner> runners)
+		{
+			if(s_changeRunnersInReality || m_alternateReality)
+			{
+				curr.baseRunners = runners;
+			}
+		}
+
 		private void putBatterOnBase(GameEvent curr, int newBase)
 		{
 			if (newBase > 0 && newBase < 4)
@@ -105,7 +117,7 @@ namespace Rescorer
 			var geb = CreateGebr(curr.batterId, curr.pitcherId, 0, newBase);
 			var runners = curr.baseRunners.ToList();
 			runners.Add(geb);
-			curr.baseRunners = runners;
+			storeRunners(curr, runners);
 		}
 
 		public void handleHomerun(GameEvent curr)
@@ -124,7 +136,7 @@ namespace Rescorer
 			m_bases[1] = null;
 			m_bases[2] = null;
 			m_bases[3] = null;
-			curr.baseRunners = runners;
+			storeRunners(curr, runners);
 
 			// Also record the batter scoring
 			putBatterOnBase(curr, 4);
@@ -147,7 +159,7 @@ namespace Rescorer
 			m_bases[1] = null;
 			m_bases[2] = null;
 			m_bases[3] = null;
-			curr.baseRunners = runners;
+			storeRunners(curr, runners);
 
 			// Batter on 3rd
 			putBatterOnBase(curr, 3);
@@ -169,7 +181,7 @@ namespace Rescorer
 			m_bases[1] = null;
 			m_bases[2] = null;
 			m_bases[3] = null;
-			curr.baseRunners = runners;
+			storeRunners(curr, runners);
 
 			// Batter on 2nd
 			putBatterOnBase(curr, 2);
@@ -209,13 +221,13 @@ namespace Rescorer
 				}
 			}
 
-			curr.baseRunners = runners;
+			storeRunners(curr, runners);
 
 			// Batter on 1st
 			putBatterOnBase(curr, 1);
 		}
 
-		public void handleNoHit(GameEvent curr)
+		public void persistBaserunners(GameEvent curr)
 		{
 			// Just list all the baserunners we're tracking
 			List<GameEventBaseRunner> runners = new List<GameEventBaseRunner>();
@@ -228,7 +240,7 @@ namespace Rescorer
 				}
 			}
 
-			curr.baseRunners = runners;
+			storeRunners(curr, runners);
 		}
 
 		public void handleWalk(GameEvent curr)
@@ -285,7 +297,7 @@ namespace Rescorer
 				m_score++;
 			}
 
-			curr.baseRunners = runners;
+			storeRunners(curr, runners);
 
 			putBatterOnBase(curr, 1);
 		}
@@ -346,7 +358,7 @@ namespace Rescorer
 				runners.Add(CreateGebr(scored.playerId, scored.pitcherId, 3, 4));
 				m_score++;
 			}
-			curr.baseRunners = runners;
+			storeRunners(curr, runners);
 
 			// Make sure there's an out on this play
 			curr.outsOnPlay = 1;
@@ -371,6 +383,71 @@ namespace Rescorer
 					handleSingle(curr);
 					break;
 			}
+		}
+
+		private void handleOuts(GameEvent curr)
+		{
+			// TODO: use battedBallType once it's available
+			// TODO: correct final state of runners?
+			// If the batter grounds out, runners advance
+			if (curr.eventText.Any(x => x.Contains("ground out")))
+			{
+				List<GameEventBaseRunner> runners = new List<GameEventBaseRunner>();
+
+				Baserunner scored = m_bases[3];
+				m_bases[3] = m_bases[2];
+				m_bases[2] = m_bases[1];
+				m_bases[1] = null;
+
+				// Guy on 3rd scores if less than 2 outs
+				if(scored != null && curr.outsBeforePlay < 2)
+				{
+					runners.Add(CreateGebr(scored.playerId, scored.pitcherId, 3, 4));
+					m_score++;
+				}
+
+				for(int i=1; i < 4; i++)
+				{
+					if(m_bases[i] != null)
+					{
+						runners.Add(CreateGebr(m_bases[i].playerId, m_bases[i].pitcherId, i - 1, i));
+					}
+				}
+				storeRunners(curr, runners);
+			}
+			else if(curr.isSacrificeHit || curr.isSacrificeFly || curr.eventText.Any(x => x.Contains("sacrifice") || x.Contains("flyout")))
+			{
+				if (curr.outsBeforePlay < 2)
+				{
+					List<GameEventBaseRunner> runners = new List<GameEventBaseRunner>();
+					// On a sac or flyout with less than 2 outs, runners on 2nd and 3rd advance
+					Baserunner scored = m_bases[3];
+					m_bases[3] = m_bases[2];
+					m_bases[2] = null;
+
+					if (scored != null)
+					{
+						runners.Add(CreateGebr(scored.playerId, scored.pitcherId, 3, 4));
+						m_score++;
+					}
+
+					for(int i=1; i<4; i++)
+					{
+						if(m_bases[i] != null)
+						{
+							runners.Add(CreateGebr(m_bases[i].playerId, m_bases[i].pitcherId, i - 1, i));
+						}
+					}
+
+					storeRunners(curr, runners);
+				}
+			}
+			else
+			{
+				// Persist our baserunners for any other kind of out
+				persistBaserunners(curr);
+			}
+
 		}
 
 		public IEnumerable<GameEvent> Rescore(IEnumerable<GameEvent> events)
@@ -398,6 +475,7 @@ namespace Rescorer
 						curr.isSacrificeHit = false;
 						curr.isWalk = false;
 						curr.outsOnPlay = 1;
+						m_alternateReality = true;
 					}
 				}
 
@@ -410,6 +488,9 @@ namespace Rescorer
 					case GameEventType.WALK:
 						handleWalk(curr);
 						break;
+					case GameEventType.OUT:
+						handleOuts(curr);
+						break;
 					case GameEventType.HOME_RUN:
 					case GameEventType.TRIPLE:
 					case GameEventType.DOUBLE:
@@ -417,7 +498,6 @@ namespace Rescorer
 						handleHit(curr);
 						break;
 					default:
-						handleNoHit(curr);
 						break;
 				}
 
@@ -428,7 +508,7 @@ namespace Rescorer
 				// BOOO this is actually matching lousy behavior in Cauldron, somebody should really fix that:/
 				if(inningEnded)
 				{
-					curr.baseRunners = new List<GameEventBaseRunner>();
+					storeRunners(curr, new List<GameEventBaseRunner>());
 				}
 			}
 
