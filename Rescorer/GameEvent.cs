@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace Rescorer
 {
@@ -68,7 +69,17 @@ namespace Rescorer
 		public int homeStrikeCount { get; set; }
 		public int awayStrikeCount { get; set; }
 		public int batterCount { get; set; }
+		public IEnumerable<char> pitchesList { get; set; }
 		public IEnumerable<char> pitches { get; set; }
+
+		[JsonIgnore]
+		public IEnumerable<char> RealPitches
+		{ 
+			get
+			{
+				return pitchesList ?? pitches;
+			}
+		}
 		public int totalStrikes { get; set; }
 		public int totalBalls { get; set; }
 		public int totalFouls { get; set; }

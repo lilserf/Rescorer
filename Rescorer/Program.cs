@@ -21,9 +21,12 @@ namespace Rescorer
 			{
 				Console.WriteLine($"Loading GameEvents from {jsonFile}...");
 				p.LoadFromJson(jsonFile);
-				//p.FilterToGameList(gameListFile);
-				//p.WriteFiltered($"jsonFile-filtered.json");
+				p.FilterToGameList(gameListFile);
+				p.WriteFiltered($"jsonFile-filtered.json");
 			}
+
+			// Temp check this game
+			p.Run("005a2ae5-1727-44f8-88c1-d24e17e1582b", outputFolder);
 
 			using(StreamReader sr = new StreamReader(gameListFile))
 			{

@@ -108,7 +108,8 @@ namespace Rescorer
 			{
 				while (!sr.EndOfStream)
 				{
-					GameEvent e = JsonSerializer.Deserialize<GameEvent>(sr.ReadLine(), new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+					string line = sr.ReadLine();
+					GameEvent e = JsonSerializer.Deserialize<GameEvent>(line, new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
 					m_gameEvents.Add(e);
 				}
 			}
@@ -181,7 +182,10 @@ namespace Rescorer
 
 			// ACTUALLY DO THE RESCORING
 			FourthStrikeAnalyzer fsa = new FourthStrikeAnalyzer();
-			var newEvents = fsa.RescoreGame(sorted);
+			var results = fsa.RescoreGame(sorted);
+
+			Console.WriteLine($"Game {gameId} had {results.numNewStrikeouts} new strikeouts.");
+			var newEvents = results.newEvents;
 
 			using(FileStream s = new FileStream($"{outputFolderName}/{gameId}-after.json", FileMode.Create))
 			{
