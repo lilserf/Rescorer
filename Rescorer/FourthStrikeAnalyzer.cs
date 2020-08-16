@@ -479,7 +479,6 @@ namespace Rescorer
 					}
 				}
 
-				// TODO handle sacrifice
 				switch (curr.eventType)
 				{
 					case GameEventType.FIELDERS_CHOICE:

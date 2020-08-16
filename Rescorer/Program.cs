@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 
 namespace Rescorer
 {
@@ -8,12 +9,30 @@ namespace Rescorer
 		{
 			Processor p = new Processor();
 
-			//p.Run("00018bf4-9498-4ec7-ad49-cdf0a60efbed");
-			
-			p.Run("0078d5d5-dc02-4025-821a-21fb7cc20556");
+			string gameListFile = args[0];
+			string outputFolder = args[1];
+			string jsonFile = null;
+			if(args.Length > 2)
+			{
+				jsonFile = args[2];
+			}
 
-			// No fourth strike, no known errors
-			//p.Run("6cbe5b8b-d332-41fc-b627-23503f4daaf4");
+			if(jsonFile != null)
+			{
+				Console.WriteLine($"Loading GameEvents from {jsonFile}...");
+				p.LoadFromJson(jsonFile);
+				//p.FilterToGameList(gameListFile);
+				//p.WriteFiltered($"jsonFile-filtered.json");
+			}
+
+			using(StreamReader sr = new StreamReader(gameListFile))
+			{
+				while (!sr.EndOfStream)
+				{
+					string id = sr.ReadLine();
+					p.Run(id, outputFolder);
+				}
+			}
 		}
 	}
 }
