@@ -52,11 +52,17 @@ namespace Rescorer
 			public string batterId;
 			public int eventId;
 			public int dbId;
+			public string lastText;
 
 			public override string ToString()
 			{
 				string topbot = topOfInning ? "Top" : "Bot";
-				return $"{dbId,6} [{eventId,3}]: {topbot}{inning+1,2}, {outs} out  {type,16}";
+				string truncLastText = lastText;
+				if (truncLastText.Length > 40)
+				{
+					truncLastText = lastText.Substring(0, 40);
+				}
+				return $"{dbId,7} [{eventId,3}]: {topbot}{inning+1,2}, {outs} out  {type,16} {truncLastText,-40}";
 			}
 		}
 
@@ -95,7 +101,16 @@ namespace Rescorer
 
 		private Summary MakeSummary(GameEvent e)
 		{
-			return new Summary { dbId = e.id, eventId = e.eventIndex, inning = e.inning, topOfInning=e.topOfInning, outs = e.outsBeforePlay, type = e.eventType, batterId = e.batterId };
+			return new Summary {
+				dbId = e.id,
+				eventId = e.eventIndex,
+				inning = e.inning,
+				topOfInning = e.topOfInning,
+				outs = e.outsBeforePlay,
+				type = e.eventType,
+				batterId = e.batterId,
+				lastText = e.eventText.Last()
+			};
 		}
 
 		List<GameEvent> m_gameEvents = null;
@@ -215,23 +230,24 @@ namespace Rescorer
 				s.WriteLine($" {header}    {header}");
 				foreach(var inningNum in innings.Keys.OrderBy(x => x))
 				{
+					s.WriteLine();
 					s.WriteLine($"========================================== Inning {inningNum+1} =========================================");
+					s.WriteLine();
 					Inning inning = innings[inningNum];
 					int numLines = Math.Max(inning.awayBefore.Count, inning.awayAfter.Count);
 					for(int lineNum = 0; lineNum < numLines; lineNum++)
 					{
 						string before = (lineNum < inning.awayBefore.Count) ? inning.awayBefore[lineNum].ToString() : "";
 						string after = (lineNum < inning.awayAfter.Count) ? inning.awayAfter[lineNum].ToString() : "";
-						s.WriteLine($"{before,45} | {after,45}");
+						s.WriteLine($"{before,87} | {after,87}");
 					}
-					s.WriteLine();
 					s.WriteLine();
 					numLines = Math.Max(inning.homeBefore.Count, inning.homeAfter.Count);
 					for (int lineNum = 0; lineNum < numLines; lineNum++)
 					{
 						string before = (lineNum < inning.homeBefore.Count) ? inning.homeBefore[lineNum].ToString() : "";
 						string after = (lineNum < inning.homeAfter.Count) ? inning.homeAfter[lineNum].ToString() : "";
-						s.WriteLine($"{before,45} | {after,45}");
+						s.WriteLine($"{before,87} | {after,87}");
 					}
 				}
 			}
