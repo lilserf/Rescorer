@@ -2,7 +2,7 @@
   "profiles": {
     "Rescorer": {
       "commandName": "Project",
-      "commandLineArgs": "../../../../few-fourth-strike-games.txt few-games s3-filtered.sibr"
+      "commandLineArgs": "../../../../few-fourth-strike-games.txt few-games s3-1.4.0-filtered.sibr"
     }
   }
 }

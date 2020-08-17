@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
 
@@ -112,7 +113,7 @@ namespace Rescorer
 		public override string ToString()
 		{
 			string topbot = topOfInning ? "Top" : "Bot";
-			return $"[{eventIndex}] {topbot}{inning}, {outsBeforePlay} out: {eventType}";
+			return $"[{eventIndex}] {topbot}{inning+1}, {outsBeforePlay} out: {eventType}, {eventText.Last()}";
 		}
 
 	}

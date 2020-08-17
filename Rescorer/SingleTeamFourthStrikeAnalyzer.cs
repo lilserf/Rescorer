@@ -31,7 +31,7 @@ namespace Rescorer
 
 		// Should we change runners in the "reality" phase before we've diverged?
 		// Useful for debugging, but should be turned off for real analysis so that games can only diverge after a fourth strike change
-		static bool s_changeRunnersInReality = false;
+		static bool s_allowRealityChanges = false;
 		const int BASE_ADVANCE = 2;
 
 		public SingleTeamFourthStrikeAnalyzer(bool isHome)
@@ -102,11 +102,19 @@ namespace Rescorer
 			};
 		}
 
-		private void storeRunners(GameEvent curr, IEnumerable<GameEventBaseRunner> runners)
+		private void copyRunnersToEvent(GameEvent curr, IEnumerable<GameEventBaseRunner> runners)
 		{
-			if (s_changeRunnersInReality || m_alternateReality)
+			if (s_allowRealityChanges || m_alternateReality)
 			{
 				curr.baseRunners = runners;
+			}
+		}
+
+		private void incrementScore()
+		{
+			if(s_allowRealityChanges || m_alternateReality)
+			{
+				m_score++;
 			}
 		}
 
@@ -119,7 +127,7 @@ namespace Rescorer
 			var geb = CreateGebr(curr.batterId, curr.pitcherId, 0, newBase);
 			var runners = curr.baseRunners.ToList();
 			runners.Add(geb);
-			storeRunners(curr, runners);
+			copyRunnersToEvent(curr, runners);
 		}
 
 		public void handleHomerun(GameEvent curr)
@@ -132,17 +140,17 @@ namespace Rescorer
 				{
 					var geb = CreateGebr(m_bases[i].playerId, m_bases[i].pitcherId, i, 4);
 					runners.Add(geb);
-					m_score++;
+					incrementScore();
 				}
 			}
 			m_bases[1] = null;
 			m_bases[2] = null;
 			m_bases[3] = null;
-			storeRunners(curr, runners);
+			copyRunnersToEvent(curr, runners);
 
 			// Also record the batter scoring
 			putBatterOnBase(curr, 4);
-			m_score++;
+			incrementScore();
 		}
 
 		public void handleTriple(GameEvent curr)
@@ -155,13 +163,13 @@ namespace Rescorer
 				{
 					var geb = CreateGebr(m_bases[i].playerId, m_bases[i].pitcherId, i, 4);
 					runners.Add(geb);
-					m_score++;
+					incrementScore();
 				}
 			}
 			m_bases[1] = null;
 			m_bases[2] = null;
 			m_bases[3] = null;
-			storeRunners(curr, runners);
+			copyRunnersToEvent(curr, runners);
 
 			// Batter on 3rd
 			putBatterOnBase(curr, 3);
@@ -177,13 +185,13 @@ namespace Rescorer
 				{
 					var geb = CreateGebr(m_bases[i].playerId, m_bases[i].pitcherId, i, 4);
 					runners.Add(geb);
-					m_score++;
+					incrementScore();
 				}
 			}
 			m_bases[1] = null;
 			m_bases[2] = null;
 			m_bases[3] = null;
-			storeRunners(curr, runners);
+			copyRunnersToEvent(curr, runners);
 
 			// Batter on 2nd
 			putBatterOnBase(curr, 2);
@@ -199,7 +207,7 @@ namespace Rescorer
 				{
 					var geb = CreateGebr(m_bases[i].playerId, m_bases[i].pitcherId, i, 4);
 					runners.Add(geb);
-					m_score++;
+					incrementScore();
 				}
 			}
 			m_bases[2] = null;
@@ -214,7 +222,7 @@ namespace Rescorer
 
 				if (newBase == 4)
 				{
-					m_score++;
+					incrementScore();
 				}
 
 				if (newBase > 0 && newBase < 4)
@@ -224,7 +232,7 @@ namespace Rescorer
 				m_bases[1] = null;
 			}
 
-			storeRunners(curr, runners);
+			copyRunnersToEvent(curr, runners);
 
 			// Batter on 1st
 			putBatterOnBase(curr, 1);
@@ -243,7 +251,7 @@ namespace Rescorer
 				}
 			}
 
-			storeRunners(curr, runners);
+			copyRunnersToEvent(curr, runners);
 		}
 
 		public void handleWalk(GameEvent curr)
@@ -297,10 +305,10 @@ namespace Rescorer
 			if (scored != null)
 			{
 				runners.Add(CreateGebr(scored.playerId, scored.pitcherId, 3, 4));
-				m_score++;
+				incrementScore();
 			}
 
-			storeRunners(curr, runners);
+			copyRunnersToEvent(curr, runners);
 
 			putBatterOnBase(curr, 1);
 		}
@@ -359,9 +367,9 @@ namespace Rescorer
 			{
 				// Only scoring from 3rd on fielder's choice
 				runners.Add(CreateGebr(scored.playerId, scored.pitcherId, 3, 4));
-				m_score++;
+				incrementScore();
 			}
-			storeRunners(curr, runners);
+			copyRunnersToEvent(curr, runners);
 
 			// Make sure there's an out on this play
 			curr.outsOnPlay = 1;
@@ -391,8 +399,8 @@ namespace Rescorer
 		private void handleOuts(GameEvent curr)
 		{
 			// TODO: use battedBallType once it's available
-			// TODO: correct final state of runners?
 			// If the batter grounds out, runners advance
+			// TODO: More sophisticated per-runner simulation of who advances on fly/ground outs
 			if (curr.eventText.Any(x => x.Contains("ground out")))
 			{
 				List<GameEventBaseRunner> runners = new List<GameEventBaseRunner>();
@@ -406,7 +414,7 @@ namespace Rescorer
 				if (scored != null && curr.outsBeforePlay < 2)
 				{
 					runners.Add(CreateGebr(scored.playerId, scored.pitcherId, 3, 4));
-					m_score++;
+					incrementScore();
 				}
 
 				for (int i = 1; i < 4; i++)
@@ -416,7 +424,7 @@ namespace Rescorer
 						runners.Add(CreateGebr(m_bases[i].playerId, m_bases[i].pitcherId, i - 1, i));
 					}
 				}
-				storeRunners(curr, runners);
+				copyRunnersToEvent(curr, runners);
 			}
 			else if (curr.isSacrificeHit || curr.isSacrificeFly || curr.eventText.Any(x => x.Contains("sacrifice") || x.Contains("flyout")))
 			{
@@ -431,18 +439,22 @@ namespace Rescorer
 					if (scored != null)
 					{
 						runners.Add(CreateGebr(scored.playerId, scored.pitcherId, 3, 4));
-						m_score++;
+						incrementScore();
 					}
 
-					for (int i = 1; i < 4; i++)
+					// Third came from 2nd
+					if(m_bases[3] != null)
 					{
-						if (m_bases[i] != null)
-						{
-							runners.Add(CreateGebr(m_bases[i].playerId, m_bases[i].pitcherId, i - 1, i));
-						}
+						runners.Add(CreateGebr(m_bases[3].playerId, m_bases[3].pitcherId, 2, 3));
 					}
 
-					storeRunners(curr, runners);
+					// First stayed on first
+					if (m_bases[1] != null)
+					{
+						runners.Add(CreateGebr(m_bases[1].playerId, m_bases[1].pitcherId, 1, 1));
+					}
+
+					copyRunnersToEvent(curr, runners);
 				}
 			}
 			else
@@ -453,19 +465,54 @@ namespace Rescorer
 
 		}
 
+		private void storeEventBaserunners(GameEvent curr)
+		{
+			m_bases[1] = null;
+			m_bases[2] = null;
+			m_bases[3] = null;
+
+			if (curr.baseRunners != null)
+			{
+				foreach (var br in curr.baseRunners)
+				{
+					if (br.baseAfterPlay < 4)
+					{
+						m_bases[br.baseAfterPlay] = new Baserunner(br.runnerId, br.responsiblePitcherId);
+					}
+				}
+			}
+		}
+
 		public AnalyzerResult Rescore(IEnumerable<GameEvent> events)
 		{
 			foreach (GameEvent curr in events)
 			{
-				// First set the correct current inning and outs
-				curr.inning = m_inning;
-				curr.outsBeforePlay = m_outs;
-				// And score
-				if (m_isHome)
-					curr.homeScore = m_score;
-				else
-					curr.awayScore = m_score;
 
+				if (s_allowRealityChanges || m_alternateReality)
+				{
+					// First replace this event's inning and outs with our own tracking
+					curr.inning = m_inning;
+					curr.outsBeforePlay = m_outs;
+					// And score
+					if (m_isHome)
+						curr.homeScore = m_score;
+					else
+						curr.awayScore = m_score;
+				}
+				else
+				{
+					// We haven't diverged from reality yet; take the event's tracking as correct
+					m_inning = curr.inning;
+					m_outs = curr.outsBeforePlay;
+					if(m_isHome)
+					{
+						m_score = (int)curr.homeScore;
+					}
+					else
+					{
+						m_score = (int)curr.awayScore;
+					}
+				}
 
 				// This batter should have struck out!
 				if (curr.totalStrikes >= 3 && curr.eventType != GameEventType.STRIKEOUT)
@@ -483,35 +530,43 @@ namespace Rescorer
 					}
 				}
 
-				switch (curr.eventType)
+				if (s_allowRealityChanges || m_alternateReality)
 				{
-					case GameEventType.FIELDERS_CHOICE:
-						handleFieldersChoice(curr);
-						break;
-					case GameEventType.WALK:
-						handleWalk(curr);
-						break;
-					case GameEventType.OUT:
-						handleOuts(curr);
-						break;
-					case GameEventType.HOME_RUN:
-					case GameEventType.TRIPLE:
-					case GameEventType.DOUBLE:
-					case GameEventType.SINGLE:
-						handleHit(curr);
-						break;
-					default:
-						break;
+					switch (curr.eventType)
+					{
+						case GameEventType.FIELDERS_CHOICE:
+							handleFieldersChoice(curr);
+							break;
+						case GameEventType.WALK:
+							handleWalk(curr);
+							break;
+						case GameEventType.OUT:
+							handleOuts(curr);
+							break;
+						case GameEventType.HOME_RUN:
+						case GameEventType.TRIPLE:
+						case GameEventType.DOUBLE:
+						case GameEventType.SINGLE:
+							handleHit(curr);
+							break;
+						default:
+							break;
+					}
+
+					// TODO check for double play validity?
+					// Now increment the outs and/or innings
+					var inningEnded = addOuts(curr.outsOnPlay);
+
+					// BOOO this is actually matching lousy behavior in Cauldron, somebody should really fix that:/
+					//if (inningEnded)
+					//{
+					//	copyRunnersToEvent(curr, new List<GameEventBaseRunner>());
+					//}
 				}
-
-				// TODO check for double play validity?
-				// Now increment the outs and/or innings
-				var inningEnded = addOuts(curr.outsOnPlay);
-
-				// BOOO this is actually matching lousy behavior in Cauldron, somebody should really fix that:/
-				if (inningEnded)
+				else
 				{
-					storeRunners(curr, new List<GameEventBaseRunner>());
+					// Store the event's baserunners (post-play state) locally since we're still in reality
+					storeEventBaserunners(curr);
 				}
 			}
 

@@ -45,7 +45,26 @@ namespace Rescorer
 			var combined = newHomeEvents.Concat(newAwayEvents).ToList();
 			combined.Sort(SortGameEvents);
 
-			// TODO: Each analyzer is going to adjust only the score for the team it's handling, so the all the HOME batting events have the wrong AWAY score and vice versa
+			// Each analyzer is going to adjust only the score for the team it's handling, so the all the HOME batting events have the wrong AWAY score and vice versa
+			float homeScore = 0;
+			float awayScore = 0;
+			foreach(var e in combined)
+			{
+				if(e.topOfInning)
+				{
+					// Batting team has its own score correct
+					awayScore = e.awayScore;
+					// But should take the opposing score we last saw
+					e.homeScore = homeScore;
+				}
+				else
+				{
+					// Batting team has its own score correct
+					homeScore = e.homeScore;
+					// But should take the opposing score we last saw
+					e.awayScore = awayScore;
+				}
+			}
 
 			// Re-index after sorting
 			int index = 0;

@@ -5,6 +5,8 @@ namespace Rescorer
 {
 	class Program
 	{
+		static string testGame = "005a2ae5-1727-44f8-88c1-d24e17e1582b";
+
 		static void Main(string[] args)
 		{
 			Processor p = new Processor();
@@ -21,12 +23,16 @@ namespace Rescorer
 			{
 				Console.WriteLine($"Loading GameEvents from {jsonFile}...");
 				p.LoadFromJson(jsonFile);
-				p.FilterToGameList(gameListFile);
-				p.WriteFiltered($"jsonFile-filtered.json");
+				//p.FilterToGameList(gameListFile);
+				//p.WriteFiltered($"jsonFile-filtered.json");
 			}
 
-			// Temp check this game
-			p.Run("005a2ae5-1727-44f8-88c1-d24e17e1582b", outputFolder);
+			if (testGame != null)
+			{
+				// Temp check this game
+				p.Run(testGame, outputFolder);
+				return;
+			}
 
 			using(StreamReader sr = new StreamReader(gameListFile))
 			{
