@@ -53,6 +53,9 @@ namespace Rescorer
 			public int eventId;
 			public int dbId;
 			public string lastText;
+			public int homeScore;
+			public int awayScore;
+			public bool outcomeChanged;
 
 			public override string ToString()
 			{
@@ -62,7 +65,7 @@ namespace Rescorer
 				{
 					truncLastText = lastText.Substring(0, 40);
 				}
-				return $"{dbId,7} [{eventId,3}]: {topbot}{inning+1,2}, {outs} out  {type,16} {truncLastText,-40}";
+				return $"{dbId,7} [{eventId,3}]: {awayScore,2}-{homeScore,2} {topbot}{inning+1,2}, {outs} out  {type,16} {truncLastText,-40}";
 			}
 		}
 
@@ -109,7 +112,10 @@ namespace Rescorer
 				outs = e.outsBeforePlay,
 				type = e.eventType,
 				batterId = e.batterId,
-				lastText = e.eventText.Last()
+				lastText = e.eventText.Last(),
+				homeScore = (int)e.homeScore,
+				awayScore = (int)e.awayScore,
+				outcomeChanged = e.rescoreNewStrikeout
 			};
 		}
 
@@ -223,35 +229,127 @@ namespace Rescorer
 				innings[e.inning].Add(MakeSummary(e), true);
 			}
 
-			using (StreamWriter s = new StreamWriter($"{outputFolderName}/{gameId}.diff"))
+			StringBuilder sb = new StringBuilder();
+			sb.Append("<html>");
+			sb.Append("<head>");
+			sb.Append("<link rel=\"stylesheet\" href=\"../style.css\"");
+			sb.Append("</head>");
+			sb.Append("<body>");
+			sb.Append($"<div class='gameHeader'>Rescorer Report for Game ID {gameId}</div>");
+			using(Html.Table table = new Html.Table(sb))
 			{
-				s.WriteLine($"Diff for game {gameId}");
-				string header = $"DBID   EIDX   INNING                   EVENT";
-				s.WriteLine($" {header}    {header}");
+				table.StartHead();
+				using (var thead = table.AddRow(id:"tableHeader"))
+				{
+					thead.AddCell("Event");
+					thead.AddCell("Outs");
+					thead.AddCell("Type");
+					thead.AddCell("Score");
+					thead.AddCell("Score");
+					thead.AddCell("Type");
+					thead.AddCell("Outs");
+					thead.AddCell("Event");
+				}
+				table.EndHead();
+				table.StartBody();
 				foreach(var inningNum in innings.Keys.OrderBy(x => x))
 				{
-					s.WriteLine();
-					s.WriteLine($"========================================== Inning {inningNum+1} =========================================");
-					s.WriteLine();
-					Inning inning = innings[inningNum];
-					int numLines = Math.Max(inning.awayBefore.Count, inning.awayAfter.Count);
-					for(int lineNum = 0; lineNum < numLines; lineNum++)
+					// Inning Header
+					using (var tr = table.AddRow())
 					{
-						string before = (lineNum < inning.awayBefore.Count) ? inning.awayBefore[lineNum].ToString() : "";
-						string after = (lineNum < inning.awayAfter.Count) ? inning.awayAfter[lineNum].ToString() : "";
-						s.WriteLine($"{before,87} | {after,87}");
+						tr.AddCell($"Inning {inningNum+1}", colSpan: 8, id: "inningHeader");
 					}
-					s.WriteLine();
+
+					Inning inning = innings[inningNum];
+					// Away events
+					int numLines = Math.Max(inning.awayBefore.Count, inning.awayAfter.Count);
+					for (int lineNum = 0; lineNum < numLines; lineNum++)
+					{
+						using (var tr = table.AddRow())
+						{
+							// Before cells
+							if (lineNum < inning.awayBefore.Count)
+							{
+								var summary = inning.awayBefore[lineNum];
+								tr.AddCell($"{summary.lastText}", classAttributes: "eventTextBefore");
+								tr.AddCell($"{summary.outs} out");
+								tr.AddCell($"{summary.type}", classAttributes: "typeBefore");
+								tr.AddCell($"{summary.awayScore}-{summary.homeScore}");
+							}
+							else
+							{
+								tr.AddCell("", colSpan: 4);
+							}
+
+							// After cells
+							if (lineNum < inning.awayAfter.Count)
+							{
+								var summary = inning.awayAfter[lineNum];
+								tr.AddCell($"{summary.awayScore}-{summary.homeScore}");
+								string typeClass = "typeAfter";
+								if (summary.outcomeChanged)
+									typeClass += " changed";
+								tr.AddCell($"{summary.type}", classAttributes: typeClass);
+								tr.AddCell($"{summary.outs} out");
+								tr.AddCell($"{summary.lastText}", classAttributes: "eventTextAfter");
+							}
+							else
+							{
+								tr.AddCell("", colSpan: 4);
+							}
+						}
+					}
+
+					using(var tr = table.AddRow())
+					{
+						tr.AddCell("  ", colSpan: 8, id:"inningDivider");
+					}
+
+					// Away events
 					numLines = Math.Max(inning.homeBefore.Count, inning.homeAfter.Count);
 					for (int lineNum = 0; lineNum < numLines; lineNum++)
 					{
-						string before = (lineNum < inning.homeBefore.Count) ? inning.homeBefore[lineNum].ToString() : "";
-						string after = (lineNum < inning.homeAfter.Count) ? inning.homeAfter[lineNum].ToString() : "";
-						s.WriteLine($"{before,87} | {after,87}");
+						using (var tr = table.AddRow())
+						{
+							// Before cells
+							if (lineNum < inning.homeBefore.Count)
+							{
+								var summary = inning.homeBefore[lineNum];
+								tr.AddCell($"{summary.lastText}", classAttributes: "eventTextBefore");
+								tr.AddCell($"{summary.outs} out");
+								tr.AddCell($"{summary.type}", classAttributes:"typeBefore");
+								tr.AddCell($"{summary.awayScore}-{summary.homeScore}");
+							}
+							else
+							{
+								tr.AddCell("", colSpan: 4);
+							}
+
+							// After cells
+							if (lineNum < inning.homeAfter.Count)
+							{
+								var summary = inning.homeAfter[lineNum];
+								tr.AddCell($"{summary.awayScore}-{summary.homeScore}");
+								string typeClass = "typeAfter";
+								if (summary.outcomeChanged)
+									typeClass += " changed";
+								tr.AddCell($"{summary.type}", classAttributes:typeClass);
+								tr.AddCell($"{summary.outs} out");
+								tr.AddCell($"{summary.lastText}", classAttributes: "eventTextAfter");
+							}
+							else
+							{
+								tr.AddCell("", colSpan: 4);
+							}
+						}
 					}
 				}
+				table.EndBody();
 			}
 
+			sb.Append("</body></html>");
+
+			File.WriteAllText($"{outputFolderName}/{gameId}.html", sb.ToString());
 		}
 	}
 }

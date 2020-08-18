@@ -116,5 +116,6 @@ namespace Rescorer
 			return $"[{eventIndex}] {topbot}{inning+1}, {outsBeforePlay} out: {eventType}, {eventText.Last()}";
 		}
 
+		public bool rescoreNewStrikeout { get; set; }
 	}
 }

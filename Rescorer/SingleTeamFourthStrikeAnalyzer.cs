@@ -525,6 +525,7 @@ namespace Rescorer
 						curr.isSacrificeHit = false;
 						curr.isWalk = false;
 						curr.outsOnPlay = 1;
+						curr.rescoreNewStrikeout = true;
 						m_alternateReality = true;
 						m_result.numNewStrikeouts++;
 					}
