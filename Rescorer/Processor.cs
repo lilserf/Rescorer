@@ -175,10 +175,12 @@ namespace Rescorer
 				events = m_gameEvents.Where(x => x.gameId == gameId).ToList();
 			}
 
+			// Sort the incoming events properly
 			var sorted = events.OrderBy(x => x.eventIndex).OrderBy(x => x.outsBeforePlay).OrderBy(x => !x.topOfInning).OrderBy(x => x.inning);
 
 			// UGLY but works, sorry
 			Dictionary<int, Inning> innings = new Dictionary<int, Inning>();
+			// Store a BEFORE summary for each event
 			foreach(var e in sorted)
 			{
 				if(!innings.ContainsKey(e.inning))
@@ -193,6 +195,8 @@ namespace Rescorer
 				Directory.CreateDirectory(outputFolderName);
 			}
 
+			#region JSON to diff
+			// Write the before JSON
 			using (FileStream s = new FileStream($"{outputFolderName}/{gameId}-before.json", FileMode.Create))
 			{
 				using (Utf8JsonWriter writer = new Utf8JsonWriter(s))
@@ -200,6 +204,7 @@ namespace Rescorer
 					JsonSerializer.Serialize<IEnumerable<GameEvent>>(writer, sorted, new JsonSerializerOptions() { PropertyNamingPolicy = new SnakeCaseNamingPolicy(), WriteIndented = true });
 				}
 			}
+			#endregion
 
 			// ACTUALLY DO THE RESCORING
 			FourthStrikeAnalyzer fsa = new FourthStrikeAnalyzer();
@@ -208,7 +213,8 @@ namespace Rescorer
 			Console.WriteLine($"Game {gameId} had {results.numNewStrikeouts} new strikeouts.");
 			var newEvents = results.newEvents;
 
-			using(FileStream s = new FileStream($"{outputFolderName}/{gameId}-after.json", FileMode.Create))
+			#region JSON to diff
+			using (FileStream s = new FileStream($"{outputFolderName}/{gameId}-after.json", FileMode.Create))
 			{
 				using (Utf8JsonWriter writer = new Utf8JsonWriter(s))
 				{
@@ -219,7 +225,9 @@ namespace Rescorer
 					JsonSerializer.Serialize<IEnumerable<GameEvent>>(writer, newEvents, options);
 				}
 			}
+			#endregion
 
+			// Store an AFTER summary for each event
 			foreach (var e in newEvents)
 			{
 				if (!innings.ContainsKey(e.inning))
@@ -229,13 +237,38 @@ namespace Rescorer
 				innings[e.inning].Add(MakeSummary(e), true);
 			}
 
+			int lastBeforeHomeInning = innings.Where(x => x.Value.homeBefore.Count > 0).Max(x => x.Key);
+			Inning beforeHomeInn = innings[lastBeforeHomeInning];
+			int lastBeforeAwayInning = innings.Where(x => x.Value.awayBefore.Count > 0).Max(x => x.Key);
+			Inning beforeAwayInn = innings[lastBeforeAwayInning];
+
+			int homeBefore = beforeHomeInn.homeBefore.Last().homeScore;
+			int awayBefore = beforeAwayInn.awayBefore.Last().awayScore;
+
+			int lastAfterAwayInning = innings.Where(x => x.Value.awayAfter.Count > 0).Max(x => x.Key);
+			Inning afterAwayInn = innings[lastAfterAwayInning];
+			int lastAfterHomeInning = innings.Where(x => x.Value.homeAfter.Count > 0).Max(x => x.Key);
+			Inning afterHomeInn = innings[lastAfterHomeInning];
+
+			int homeAfter = afterHomeInn.homeAfter.Last().homeScore;
+			int awayAfter = afterAwayInn.awayAfter.Last().awayScore;
+
+			bool homeWinBefore = (homeBefore > awayBefore);
+			bool homeWinAfter = (homeAfter > awayAfter);
+
+			#region HTML output
 			StringBuilder sb = new StringBuilder();
 			sb.Append("<html>");
 			sb.Append("<head>");
-			sb.Append("<link rel=\"stylesheet\" href=\"../style.css\"");
+			sb.Append("<link rel=\"stylesheet\" href=\"style.css\"");
 			sb.Append("</head>");
 			sb.Append("<body>");
 			sb.Append($"<div class='gameHeader'>Rescorer Report for Game ID {gameId}</div>");
+			sb.Append($"<div class='scoreReport'>Before: {awayBefore}-{homeBefore} After: {awayAfter}-{homeAfter}</div>");
+			if(homeWinBefore != homeWinAfter)
+			{
+				sb.Append($"<span class='outcomeReversed'>OUTCOME REVERSED!</span>");
+			}
 			using(Html.Table table = new Html.Table(sb))
 			{
 				table.StartHead();
@@ -350,6 +383,9 @@ namespace Rescorer
 			sb.Append("</body></html>");
 
 			File.WriteAllText($"{outputFolderName}/{gameId}.html", sb.ToString());
+			File.Copy("style.css", $"{outputFolderName}/style.css", true);
+
+			#endregion
 		}
 	}
 }

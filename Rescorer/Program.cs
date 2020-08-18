@@ -5,7 +5,8 @@ namespace Rescorer
 {
 	class Program
 	{
-		static string testGame = "005a2ae5-1727-44f8-88c1-d24e17e1582b";
+		//static string testGame = "005a2ae5-1727-44f8-88c1-d24e17e1582b";
+		static string testGame = null;
 
 		static void Main(string[] args)
 		{

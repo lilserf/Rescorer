@@ -17,6 +17,17 @@ td {
 	font-size:14pt;
 }
 
+.scoreReport {
+	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+	font-size:14pt;
+}
+
+.outcomeReversed {
+	background-color: firebrick;
+	color: gold;
+	font-size:14pt;
+}
+
 tr#tableHeader {
 	background-color: slategray;
 	font-weight: bold;
