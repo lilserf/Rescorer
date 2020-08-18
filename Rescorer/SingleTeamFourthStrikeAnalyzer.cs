@@ -517,6 +517,7 @@ namespace Rescorer
 				// This batter should have struck out!
 				if (curr.totalStrikes >= 3 && curr.eventType != GameEventType.STRIKEOUT)
 				{
+					var oldEventType = curr.eventType;
 					if (isStrikeout(curr.RealPitches))
 					{
 						curr.eventType = GameEventType.STRIKEOUT;
@@ -526,8 +527,16 @@ namespace Rescorer
 						curr.isWalk = false;
 						curr.outsOnPlay = 1;
 						curr.rescoreNewStrikeout = true;
-						m_alternateReality = true;
 						m_result.numNewStrikeouts++;
+
+						// If this event was already an OUT, we're still "in sync" with reality
+						// So we can track the new strikeout and add a K to that pitcher or whatever
+						// But we shouldn't go into "alternate reality" mode yet
+						if (oldEventType != GameEventType.OUT)
+						{
+							m_alternateReality = true;
+						}
+
 					}
 				}
 

@@ -35,13 +35,21 @@ namespace Rescorer
 				return;
 			}
 
-			using(StreamReader sr = new StreamReader(gameListFile))
+			using (StreamWriter index = new StreamWriter($"{outputFolder}/index.html"))
 			{
-				while (!sr.EndOfStream)
+				index.WriteLine("<html><head><link rel=\"stylesheet\" href=\"style.css\"/></head><body>");
+				index.WriteLine("<div class=gameHeader>Rescored Games:</div>");
+				using (StreamReader sr = new StreamReader(gameListFile))
 				{
-					string id = sr.ReadLine();
-					p.Run(id, outputFolder);
+					while (!sr.EndOfStream)
+					{
+						string id = sr.ReadLine();
+						p.Run(id, outputFolder);
+
+						index.WriteLine($"<a href='{id}.html'>{id}</a><br/>");
+					}
 				}
+				index.WriteLine("</body></html>");
 			}
 		}
 	}

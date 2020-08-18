@@ -260,7 +260,7 @@ namespace Rescorer
 			StringBuilder sb = new StringBuilder();
 			sb.Append("<html>");
 			sb.Append("<head>");
-			sb.Append("<link rel=\"stylesheet\" href=\"style.css\"");
+			sb.Append("<link rel=\"stylesheet\" href=\"style.css\"/>");
 			sb.Append("</head>");
 			sb.Append("<body>");
 			sb.Append($"<div class='gameHeader'>Rescorer Report for Game ID {gameId}</div>");
