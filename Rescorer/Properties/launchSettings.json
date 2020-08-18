@@ -2,7 +2,7 @@
   "profiles": {
     "Rescorer": {
       "commandName": "Project",
-      "commandLineArgs": "../../../../few-fourth-strike-games.txt few-games s3-1.4.0-filtered.sibr"
+      "commandLineArgs": "D:\\Projects\\blaseball\\fourth-strike-results\\selected-games.txt D:\\Projects\\blaseball\\fourth-strike-results\\selected-games D:\\Projects\\blaseball\\fourth-strike-results\\s3-1.4.0-filtered.sibr"
     }
   }
 }
