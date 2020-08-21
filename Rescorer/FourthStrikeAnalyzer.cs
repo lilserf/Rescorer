@@ -18,11 +18,12 @@ namespace Rescorer
 		SingleTeamFourthStrikeAnalyzer m_home;
 		SingleTeamFourthStrikeAnalyzer m_away;
 
+
 		AnalyzerResult m_result;
-		public FourthStrikeAnalyzer()
+		public FourthStrikeAnalyzer(Dictionary<string, Tuple<float,float>> singleAdvance)
 		{
-			m_home = new SingleTeamFourthStrikeAnalyzer(true);
-			m_away = new SingleTeamFourthStrikeAnalyzer(false);
+			m_home = new SingleTeamFourthStrikeAnalyzer(true, singleAdvance);
+			m_away = new SingleTeamFourthStrikeAnalyzer(false, singleAdvance);
 			m_result = new AnalyzerResult();
 		}
 

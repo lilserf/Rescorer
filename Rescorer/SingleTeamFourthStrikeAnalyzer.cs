@@ -32,10 +32,16 @@ namespace Rescorer
 		// Should we change runners in the "reality" phase before we've diverged?
 		// Useful for debugging, but should be turned off for real analysis so that games can only diverge after a fourth strike change
 		static bool s_allowRealityChanges = false;
-		const int BASE_ADVANCE = 2;
+		
+		Dictionary<string, Tuple<float, float>> m_singleAdvance;
 
-		public SingleTeamFourthStrikeAnalyzer(bool isHome)
+		Random m_random;
+
+		public SingleTeamFourthStrikeAnalyzer(bool isHome, Dictionary<string, Tuple<float,float>> singleAdvance)
 		{
+			// TODO: pass in seed
+			m_random = new Random(0);
+			m_singleAdvance = singleAdvance;
 			m_inning = 0;
 			m_outs = 0;
 			m_bases = new Baserunner[4];
@@ -43,6 +49,32 @@ namespace Rescorer
 			m_isHome = isHome;
 			m_result = new AnalyzerResult();
 		}
+
+		private int getSingleAdvanceFromFirst(string runnerId)
+		{
+			Tuple<float, float> odds;
+			if (m_singleAdvance.TryGetValue(runnerId, out odds))
+			{
+				// Do nothing
+			}
+			else
+			{
+				Console.WriteLine($"Couldn't find advance from first statistics for player ID {runnerId}!");
+				// Average is stored as empty string
+				odds = m_singleAdvance[""];
+			}
+
+			if(m_random.Next(0,100) < odds.Item1 * 100)
+			{
+				return 1;
+			}
+			else
+			{
+				return 2;
+			}
+		}
+
+
 
 		public bool addOuts(int outs)
 		{
@@ -216,7 +248,7 @@ namespace Rescorer
 			if (m_bases[1] != null)
 			{
 				// Find new base for guy on first and put him there
-				int newBase = 1 + BASE_ADVANCE;
+				int newBase = 1 + getSingleAdvanceFromFirst(m_bases[1].playerId);
 				var whosOnFirst = CreateGebr(m_bases[1].playerId, m_bases[1].pitcherId, 1, newBase);
 				runners.Add(whosOnFirst);
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace Rescorer
@@ -10,17 +11,31 @@ namespace Rescorer
 
 		static void Main(string[] args)
 		{
-			Processor p = new Processor();
 
 			string gameListFile = args[0];
 			string outputFolder = args[1];
+			string singleAdvanceFile = args[2];
 			string jsonFile = null;
-			if(args.Length > 2)
+			if(args.Length > 3)
 			{
-				jsonFile = args[2];
+				jsonFile = args[3];
 			}
 
-			if(jsonFile != null)
+			// Load the single-advance stats
+			Dictionary<string, Tuple<float, float>> singleAdvance = new Dictionary<string, Tuple<float, float>>();
+
+			using (StreamReader reader = new StreamReader(singleAdvanceFile))
+			{
+				while (!reader.EndOfStream)
+				{
+					string[] line = reader.ReadLine().Split('\t');
+					singleAdvance[line[0]] = new Tuple<float, float>(float.Parse(line[1]), float.Parse(line[2]));
+				}
+			}
+
+			Processor p = new Processor(outputFolder, singleAdvance);
+
+			if (jsonFile != null)
 			{
 				Console.WriteLine($"Loading GameEvents from {jsonFile}...");
 				p.LoadFromJson(jsonFile);
@@ -28,10 +43,15 @@ namespace Rescorer
 				//p.WriteFiltered($"jsonFile-filtered.json");
 			}
 
+			if(!Directory.Exists(outputFolder))
+			{
+				Directory.CreateDirectory(outputFolder);
+			}
+
 			if (testGame != null)
 			{
 				// Temp check this game
-				p.Run(testGame, outputFolder);
+				p.Run(testGame);
 				return;
 			}
 
@@ -44,7 +64,7 @@ namespace Rescorer
 					while (!sr.EndOfStream)
 					{
 						string id = sr.ReadLine();
-						p.Run(id, outputFolder);
+						p.Run(id);
 
 						index.WriteLine($"<a href='{id}.html'>{id}</a><br/>");
 					}

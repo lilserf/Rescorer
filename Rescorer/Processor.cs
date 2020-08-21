@@ -15,7 +15,11 @@ namespace Rescorer
 	{
 		HttpClient m_client;
 
-		public Processor()
+		string m_outputFolderName;
+
+		Dictionary<string, Tuple<float, float>> m_singleAdvance;
+
+		public Processor(string outputFolder, Dictionary<string, Tuple<float,float>> singleAdvance)
 		{
 			m_client = new HttpClient();
 			m_client.BaseAddress = new Uri("http://api.blaseball-reference.com/v1/");
@@ -23,6 +27,9 @@ namespace Rescorer
 			m_client.DefaultRequestHeaders.Accept.Add(
 				new MediaTypeWithQualityHeaderValue("application/json"));
 
+			m_outputFolderName = outputFolder;
+
+			m_singleAdvance = singleAdvance;
 		}
 
 		public async Task<IEnumerable<GameEvent>> FetchGame(string gameId)
@@ -161,7 +168,7 @@ namespace Rescorer
 			}
 		}
 
-		public void Run(string gameId, string outputFolderName)
+		public GameResult Run(string gameId)
 		{
 			IEnumerable<GameEvent> events = null;
 			if (m_gameEvents == null)
@@ -175,8 +182,20 @@ namespace Rescorer
 				events = m_gameEvents.Where(x => x.gameId == gameId).ToList();
 			}
 
+			if (events.Count() == 0)
+			{
+				using (StreamWriter invalid = new StreamWriter($"{m_outputFolderName}/invalid.txt", true))
+				{
+					invalid.WriteLine($"{gameId}");
+				}
+				return null;
+			}
+
 			// Sort the incoming events properly
 			var sorted = events.OrderBy(x => x.eventIndex).OrderBy(x => x.outsBeforePlay).OrderBy(x => !x.topOfInning).OrderBy(x => x.inning);
+
+			int homeBefore = (int)sorted.Last().homeScore;
+			int awayBefore = (int)sorted.Last().awayScore;
 
 			// UGLY but works, sorry
 			Dictionary<int, Inning> innings = new Dictionary<int, Inning>();
@@ -190,14 +209,14 @@ namespace Rescorer
 				innings[e.inning].Add(MakeSummary(e));
 			}
 
-			if(!Directory.Exists(outputFolderName))
+			if(!Directory.Exists(m_outputFolderName))
 			{
-				Directory.CreateDirectory(outputFolderName);
+				Directory.CreateDirectory(m_outputFolderName);
 			}
 
 			#region JSON to diff
 			// Write the before JSON
-			using (FileStream s = new FileStream($"{outputFolderName}/{gameId}-before.json", FileMode.Create))
+			using (FileStream s = new FileStream($"{m_outputFolderName}/{gameId}-before.json", FileMode.Create))
 			{
 				using (Utf8JsonWriter writer = new Utf8JsonWriter(s))
 				{
@@ -207,14 +226,14 @@ namespace Rescorer
 			#endregion
 
 			// ACTUALLY DO THE RESCORING
-			FourthStrikeAnalyzer fsa = new FourthStrikeAnalyzer();
+			FourthStrikeAnalyzer fsa = new FourthStrikeAnalyzer(m_singleAdvance);
 			var results = fsa.RescoreGame(sorted);
 
 			Console.WriteLine($"Game {gameId} had {results.numNewStrikeouts} new strikeouts.");
 			var newEvents = results.newEvents;
 
 			#region JSON to diff
-			using (FileStream s = new FileStream($"{outputFolderName}/{gameId}-after.json", FileMode.Create))
+			using (FileStream s = new FileStream($"{m_outputFolderName}/{gameId}-after.json", FileMode.Create))
 			{
 				using (Utf8JsonWriter writer = new Utf8JsonWriter(s))
 				{
@@ -237,24 +256,8 @@ namespace Rescorer
 				innings[e.inning].Add(MakeSummary(e), true);
 			}
 
-			int lastBeforeHomeInning = innings.Where(x => x.Value.homeBefore.Count > 0).Max(x => x.Key);
-			Inning beforeHomeInn = innings[lastBeforeHomeInning];
-			int lastBeforeAwayInning = innings.Where(x => x.Value.awayBefore.Count > 0).Max(x => x.Key);
-			Inning beforeAwayInn = innings[lastBeforeAwayInning];
+			GameResult result = new GameResult(newEvents, awayBefore, homeBefore);
 
-			int homeBefore = beforeHomeInn.homeBefore.Last().homeScore;
-			int awayBefore = beforeAwayInn.awayBefore.Last().awayScore;
-
-			int lastAfterAwayInning = innings.Where(x => x.Value.awayAfter.Count > 0).Max(x => x.Key);
-			Inning afterAwayInn = innings[lastAfterAwayInning];
-			int lastAfterHomeInning = innings.Where(x => x.Value.homeAfter.Count > 0).Max(x => x.Key);
-			Inning afterHomeInn = innings[lastAfterHomeInning];
-
-			int homeAfter = afterHomeInn.homeAfter.Last().homeScore;
-			int awayAfter = afterAwayInn.awayAfter.Last().awayScore;
-
-			bool homeWinBefore = (homeBefore > awayBefore);
-			bool homeWinAfter = (homeAfter > awayAfter);
 
 			#region HTML output
 			StringBuilder sb = new StringBuilder();
@@ -264,8 +267,9 @@ namespace Rescorer
 			sb.Append("</head>");
 			sb.Append("<body>");
 			sb.Append($"<div class='gameHeader'>Rescorer Report for Game ID {gameId}</div>");
-			sb.Append($"<div class='scoreReport'>Before: {awayBefore}-{homeBefore} After: {awayAfter}-{homeAfter}</div>");
-			if(homeWinBefore != homeWinAfter)
+			sb.Append($"<div class='scoreReport'>Before: {result.OldAwayScore}-{result.OldHomeScore} After: {result.NewAwayScore}-{result.NewHomeScore}</div>");
+			sb.Append($"<div class='scoreReport'>Extra strikeouts for Away: {result.NewAwayStrikeouts} Home: {result.NewHomeStrikeouts}</div>");
+			if (result.WasOutcomeReversed)
 			{
 				sb.Append($"<span class='outcomeReversed'>OUTCOME REVERSED!</span>");
 			}
@@ -382,9 +386,10 @@ namespace Rescorer
 
 			sb.Append("</body></html>");
 
-			File.WriteAllText($"{outputFolderName}/{gameId}.html", sb.ToString());
-			File.Copy("style.css", $"{outputFolderName}/style.css", true);
+			File.WriteAllText($"{m_outputFolderName}/{gameId}.html", sb.ToString());
+			File.Copy("style.css", $"{m_outputFolderName}/style.css", true);
 
+			return result;
 			#endregion
 		}
 	}
