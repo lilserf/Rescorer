@@ -22,6 +22,9 @@ namespace Rescorer
 		public IEnumerable<GameResult> Results => m_gameResults;
 		List<GameResult> m_gameResults;
 
+		public IDictionary<string, Record> RecordAdjustments => m_recordAdjustments;
+		Dictionary<string, Record> m_recordAdjustments;
+
 		public Processor(string outputFolder, Dictionary<string, Tuple<float,float>> singleAdvance)
 		{
 			m_client = new HttpClient();
@@ -35,6 +38,7 @@ namespace Rescorer
 			m_singleAdvance = singleAdvance;
 
 			m_gameResults = new List<GameResult>();
+			m_recordAdjustments = new Dictionary<string, Record>();
 		}
 
 		public async Task<IEnumerable<GameEvent>> FetchGame(string gameId)
@@ -264,6 +268,21 @@ namespace Rescorer
 			GameResult result = new GameResult(newEvents, awayBefore, homeBefore, analyzerResults.numDroppedAppearances);
 
 			m_gameResults.Add(result);
+
+			var awayRecordAdjust = result.NewAwayRecord - result.OldAwayRecord;
+			var homeRecordAdjust = result.NewHomeRecord - result.OldHomeRecord;
+
+			if(!m_recordAdjustments.ContainsKey(result.AwayTeamId))
+			{
+				m_recordAdjustments[result.AwayTeamId] = new Record(0, 0, 0);
+			}
+			if (!m_recordAdjustments.ContainsKey(result.HomeTeamId))
+			{
+				m_recordAdjustments[result.HomeTeamId] = new Record(0, 0, 0);
+			}
+
+			m_recordAdjustments[result.AwayTeamId] += awayRecordAdjust;
+			m_recordAdjustments[result.HomeTeamId] += homeRecordAdjust;
 
 			#region HTML output
 			StringBuilder sb = new StringBuilder();

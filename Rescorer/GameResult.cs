@@ -5,6 +5,24 @@ using System.Text;
 
 namespace Rescorer
 {
+	public class Record
+	{
+		public int Wins { get; set; }
+		public int Losses { get; set; }
+		public int Ties { get; set; }
+
+		public Record(int wins, int losses, int ties)
+		{
+			Wins = wins;
+			Losses = losses;
+			Ties = ties;
+		}
+
+		public static Record operator +(Record a, Record b) => new Record(a.Wins + b.Wins, a.Losses + b.Losses, a.Ties + b.Ties);
+		
+		public static Record operator -(Record a, Record b) => new Record(a.Wins - b.Wins, a.Losses - b.Losses, a.Ties - b.Ties);
+	}
+
 	public class GameResult
 	{
 		public enum ScoreOutcome
@@ -20,6 +38,53 @@ namespace Rescorer
 		}
 
 		public string GameId { get; set; }
+
+		public string HomeTeamId { get; set; }
+		public string AwayTeamId { get; set; }
+
+		public string OldWinnerTeamId
+		{
+			get
+			{
+				return OldAwayScore > OldHomeScore ? AwayTeamId : HomeTeamId;
+			}
+		}
+
+		public Record OldHomeRecord
+		{
+			get
+			{
+				return OldAwayScore > OldHomeScore ? new Record(0, 1, 0) : new Record(1, 0, 0);
+			}
+		}
+
+		public Record OldAwayRecord
+		{
+			get
+			{
+				return OldAwayScore > OldHomeScore ? new Record(1, 0, 0) : new Record(0, 1, 0);
+			}
+		}
+
+		public Record NewHomeRecord
+		{
+			get
+			{
+				if (NewHomeScore == NewAwayScore) return new Record(0, 0, 1);
+				else if (NewHomeScore > NewAwayScore) return new Record(1, 0, 0);
+				else return new Record(0, 1, 0);
+			}
+		}
+
+		public Record NewAwayRecord
+		{
+			get
+			{
+				if (NewHomeScore == NewAwayScore) return new Record(0, 0, 1);
+				else if (NewAwayScore > NewHomeScore) return new Record(1, 0, 0);
+				else return new Record(0, 1, 0);
+			}
+		}
 
 		public int OldAwayScore { get; set; }
 		public int OldHomeScore { get; set; }
@@ -93,6 +158,9 @@ namespace Rescorer
 			GameId = events.First().gameId;
 			NewAwayScore = (int)events.Last().awayScore;
 			NewHomeScore = (int)events.Last().homeScore;
+
+			HomeTeamId = events.First().pitcherTeamId;
+			AwayTeamId = events.First().batterTeamId;
 
 			// Strikeouts for home team happen in top of inning when away is batting
 			NewHomeStrikeouts = events.Where(x => x.topOfInning == true).Sum(x => x.rescoreNewStrikeout ? 1 : 0);
