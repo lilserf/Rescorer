@@ -11,6 +11,10 @@ namespace Rescorer
 		public IEnumerable<GameEvent> newEvents { get; set; }
 
 		public int numNewStrikeouts { get; set; }
+
+		public int numDroppedAppearances { get; set; }
+
+		public bool outcomeUnknown { get; set; }
 	}
 
 	class FourthStrikeAnalyzer
@@ -75,10 +79,61 @@ namespace Rescorer
 				index++;
 			}
 
+			// Find end of game
+			int inning = 8; // 9th inning
+			bool top = true;
+			bool gameOver = false;
+			while(!gameOver)
+			{
+				var lastEvent = combined.Where(x => x.inning == inning && x.topOfInning == top).LastOrDefault();
+
+				if(lastEvent == null)
+				{
+					break;
+				}
+
+				if(top && lastEvent.homeScore > lastEvent.awayScore)
+				{
+					// Home team wins after the top of the 9th (or greater) if leading
+					gameOver = true;
+					break;
+				}
+				else if(!top && lastEvent.homeScore != lastEvent.awayScore)
+				{
+					// Some team wins at bottom of 9th if not tied
+					gameOver = true;
+					break;
+				}
+
+				// Increment to the next half-inning
+				if(top)
+				{
+					top = false;
+				}
+				else
+				{
+					inning++;
+					top = true;
+				}
+			}
+
+
+			if(gameOver)
+			{
+				var dropped = combined.Where(x => x.inning > inning || (top && x.inning == inning && !x.topOfInning));
+				m_result.numDroppedAppearances = dropped.Count();
+				combined = combined.Except(dropped).ToList();
+			}
+			else
+			{
+				m_result.outcomeUnknown = true;
+			}
+
 			m_result.numNewStrikeouts = newHomeResult.numNewStrikeouts + newAwayResult.numNewStrikeouts;
 			m_result.newEvents = combined;
 			return m_result;
 		}
+
 
 		private int SortGameEvents(GameEvent x, GameEvent y)
 		{

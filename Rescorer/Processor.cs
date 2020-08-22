@@ -19,6 +19,9 @@ namespace Rescorer
 
 		Dictionary<string, Tuple<float, float>> m_singleAdvance;
 
+		public IEnumerable<GameResult> Results => m_gameResults;
+		List<GameResult> m_gameResults;
+
 		public Processor(string outputFolder, Dictionary<string, Tuple<float,float>> singleAdvance)
 		{
 			m_client = new HttpClient();
@@ -30,6 +33,8 @@ namespace Rescorer
 			m_outputFolderName = outputFolder;
 
 			m_singleAdvance = singleAdvance;
+
+			m_gameResults = new List<GameResult>();
 		}
 
 		public async Task<IEnumerable<GameEvent>> FetchGame(string gameId)
@@ -227,10 +232,10 @@ namespace Rescorer
 
 			// ACTUALLY DO THE RESCORING
 			FourthStrikeAnalyzer fsa = new FourthStrikeAnalyzer(m_singleAdvance);
-			var results = fsa.RescoreGame(sorted);
+			var analyzerResults = fsa.RescoreGame(sorted);
 
-			Console.WriteLine($"Game {gameId} had {results.numNewStrikeouts} new strikeouts.");
-			var newEvents = results.newEvents;
+			Console.WriteLine($"Game {gameId} had {analyzerResults.numNewStrikeouts} new strikeouts.");
+			var newEvents = analyzerResults.newEvents;
 
 			#region JSON to diff
 			using (FileStream s = new FileStream($"{m_outputFolderName}/{gameId}-after.json", FileMode.Create))
@@ -256,8 +261,9 @@ namespace Rescorer
 				innings[e.inning].Add(MakeSummary(e), true);
 			}
 
-			GameResult result = new GameResult(newEvents, awayBefore, homeBefore);
+			GameResult result = new GameResult(newEvents, awayBefore, homeBefore, analyzerResults.numDroppedAppearances);
 
+			m_gameResults.Add(result);
 
 			#region HTML output
 			StringBuilder sb = new StringBuilder();
@@ -269,6 +275,8 @@ namespace Rescorer
 			sb.Append($"<div class='gameHeader'>Rescorer Report for Game ID {gameId}</div>");
 			sb.Append($"<div class='scoreReport'>Before: {result.OldAwayScore}-{result.OldHomeScore} After: {result.NewAwayScore}-{result.NewHomeScore}</div>");
 			sb.Append($"<div class='scoreReport'>Extra strikeouts for Away: {result.NewAwayStrikeouts} Home: {result.NewHomeStrikeouts}</div>");
+			sb.Append($"<div class='scoreReport'>Outcome: {result.Outcome}</div>");
+			sb.Append($"<div class='scoreReport'>Dropped Appearances: {analyzerResults.numDroppedAppearances}</div>");
 			if (result.WasOutcomeReversed)
 			{
 				sb.Append($"<span class='outcomeReversed'>OUTCOME REVERSED!</span>");

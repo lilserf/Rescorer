@@ -81,6 +81,45 @@ td.changed {
 	color: white;
 }
 
+
+div.summary {
+	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+	font-size: 14pt;
+}
+
+span.SameScore {
+	color: green; 
+}
+
+span.BiggerWin {
+	color: orange;
+}
+
+span.SmallerWin {
+	color: blue;
+}
+
+span.SameWin {
+	color:purple
+}
+
+span.Reversed {
+	color:red;
+}
+
+span.Tied {
+	color:teal;
+}
+
+span.ExtraInningsUnknown {
+	color:black;
+}
+
+span.Error {
+	color:darkgrey;
+}
+
+
 .tooltip {
 	position: relative;
 	display: inline-block;

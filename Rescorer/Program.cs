@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace Rescorer
 {
@@ -55,22 +56,42 @@ namespace Rescorer
 				return;
 			}
 
+			using (StreamReader sr = new StreamReader(gameListFile))
+			{
+				while (!sr.EndOfStream)
+				{
+					string id = sr.ReadLine();
+					// RESCORE THIS GAME
+					p.Run(id);
+				}
+			}
+
+			// Produce index.html
 			using (StreamWriter index = new StreamWriter($"{outputFolder}/index.html"))
 			{
 				index.WriteLine("<html><head><link rel=\"stylesheet\" href=\"style.css\"/></head><body>");
-				index.WriteLine("<div class=gameHeader>Rescored Games:</div>");
-				using (StreamReader sr = new StreamReader(gameListFile))
+				index.WriteLine("<div class=summary>Outcome Summary:");
+				index.WriteLine("<table class=summary>");
+				foreach(GameResult.ScoreOutcome outcome in Enum.GetValues(typeof(GameResult.ScoreOutcome)))
 				{
-					while (!sr.EndOfStream)
-					{
-						string id = sr.ReadLine();
-						p.Run(id);
-
-						index.WriteLine($"<a href='{id}.html'>{id}</a><br/>");
-					}
+					index.WriteLine($"<tr><td><span class={outcome}>{outcome}</span></td><td>{p.Results.Where(x => x.Outcome == outcome).Count()}</td></tr>");
+				}
+				index.WriteLine("</table>");
+				index.WriteLine("<table class=stats>");
+				index.WriteLine($"<tr><td>Total new strikeouts:</td><td>{p.Results.Sum(x => x.NewAwayStrikeouts + x.NewHomeStrikeouts)}</td></tr>");
+				index.WriteLine($"<tr><td>Total dropped appearances:</td><td>{p.Results.Sum(x => x.DroppedAppearances)}</td></tr>");
+				index.WriteLine("</table>");
+				index.WriteLine("</div>");
+				index.WriteLine("<div class=gameHeader>Rescored Games:</div>");
+				foreach(var result in p.Results)
+				{
+					index.WriteLine($"<span class={result.Outcome}>{result.Outcome}</span>");
+					index.WriteLine($"<a href='{result.GameId}.html'>{result.GameId}</a><br/>");
 				}
 				index.WriteLine("</body></html>");
 			}
+
+
 		}
 	}
 }

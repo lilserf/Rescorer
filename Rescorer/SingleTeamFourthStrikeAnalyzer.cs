@@ -76,7 +76,7 @@ namespace Rescorer
 
 
 
-		public bool addOuts(int outs)
+		public bool AddOuts(int outs)
 		{
 			m_outs += outs;
 			if (m_outs >= 3)
@@ -93,7 +93,7 @@ namespace Rescorer
 			return false;
 		}
 
-		public bool isStrikeout(IEnumerable<char> pitchList)
+		public static bool IsStrikeout(IEnumerable<char> pitchList)
 		{
 			// Temporary while the API doesn't have the pitch list
 			if (pitchList == null)
@@ -134,7 +134,7 @@ namespace Rescorer
 			};
 		}
 
-		private void copyRunnersToEvent(GameEvent curr, IEnumerable<GameEventBaseRunner> runners)
+		private void CopyRunnersToEvent(GameEvent curr, IEnumerable<GameEventBaseRunner> runners)
 		{
 			if (s_allowRealityChanges || m_alternateReality)
 			{
@@ -142,7 +142,7 @@ namespace Rescorer
 			}
 		}
 
-		private void incrementScore()
+		private void IncrementScore()
 		{
 			if(s_allowRealityChanges || m_alternateReality)
 			{
@@ -150,7 +150,7 @@ namespace Rescorer
 			}
 		}
 
-		private void putBatterOnBase(GameEvent curr, int newBase)
+		private void PutBatterOnBase(GameEvent curr, int newBase)
 		{
 			if (newBase > 0 && newBase < 4)
 			{
@@ -159,10 +159,10 @@ namespace Rescorer
 			var geb = CreateGebr(curr.batterId, curr.pitcherId, 0, newBase);
 			var runners = curr.baseRunners.ToList();
 			runners.Add(geb);
-			copyRunnersToEvent(curr, runners);
+			CopyRunnersToEvent(curr, runners);
 		}
 
-		public void handleHomerun(GameEvent curr)
+		public void HandleHomerun(GameEvent curr)
 		{
 			List<GameEventBaseRunner> runners = new List<GameEventBaseRunner>();
 			// Clear the bases!
@@ -172,20 +172,20 @@ namespace Rescorer
 				{
 					var geb = CreateGebr(m_bases[i].playerId, m_bases[i].pitcherId, i, 4);
 					runners.Add(geb);
-					incrementScore();
+					IncrementScore();
 				}
 			}
 			m_bases[1] = null;
 			m_bases[2] = null;
 			m_bases[3] = null;
-			copyRunnersToEvent(curr, runners);
+			CopyRunnersToEvent(curr, runners);
 
 			// Also record the batter scoring
-			putBatterOnBase(curr, 4);
-			incrementScore();
+			PutBatterOnBase(curr, 4);
+			IncrementScore();
 		}
 
-		public void handleTriple(GameEvent curr)
+		public void HandleTriple(GameEvent curr)
 		{
 			List<GameEventBaseRunner> runners = new List<GameEventBaseRunner>();
 			// Clear the bases!
@@ -195,19 +195,19 @@ namespace Rescorer
 				{
 					var geb = CreateGebr(m_bases[i].playerId, m_bases[i].pitcherId, i, 4);
 					runners.Add(geb);
-					incrementScore();
+					IncrementScore();
 				}
 			}
 			m_bases[1] = null;
 			m_bases[2] = null;
 			m_bases[3] = null;
-			copyRunnersToEvent(curr, runners);
+			CopyRunnersToEvent(curr, runners);
 
 			// Batter on 3rd
-			putBatterOnBase(curr, 3);
+			PutBatterOnBase(curr, 3);
 		}
 
-		public void handleDouble(GameEvent curr)
+		public void HandleDouble(GameEvent curr)
 		{
 			List<GameEventBaseRunner> runners = new List<GameEventBaseRunner>();
 			// Clear the bases!
@@ -217,19 +217,19 @@ namespace Rescorer
 				{
 					var geb = CreateGebr(m_bases[i].playerId, m_bases[i].pitcherId, i, 4);
 					runners.Add(geb);
-					incrementScore();
+					IncrementScore();
 				}
 			}
 			m_bases[1] = null;
 			m_bases[2] = null;
 			m_bases[3] = null;
-			copyRunnersToEvent(curr, runners);
+			CopyRunnersToEvent(curr, runners);
 
 			// Batter on 2nd
-			putBatterOnBase(curr, 2);
+			PutBatterOnBase(curr, 2);
 		}
 
-		public void handleSingle(GameEvent curr)
+		public void HandleSingle(GameEvent curr)
 		{
 			List<GameEventBaseRunner> runners = new List<GameEventBaseRunner>();
 			// Score runners in scoring position
@@ -239,7 +239,7 @@ namespace Rescorer
 				{
 					var geb = CreateGebr(m_bases[i].playerId, m_bases[i].pitcherId, i, 4);
 					runners.Add(geb);
-					incrementScore();
+					IncrementScore();
 				}
 			}
 			m_bases[2] = null;
@@ -254,7 +254,7 @@ namespace Rescorer
 
 				if (newBase == 4)
 				{
-					incrementScore();
+					IncrementScore();
 				}
 
 				if (newBase > 0 && newBase < 4)
@@ -264,13 +264,13 @@ namespace Rescorer
 				m_bases[1] = null;
 			}
 
-			copyRunnersToEvent(curr, runners);
+			CopyRunnersToEvent(curr, runners);
 
 			// Batter on 1st
-			putBatterOnBase(curr, 1);
+			PutBatterOnBase(curr, 1);
 		}
 
-		public void persistBaserunners(GameEvent curr)
+		public void PersistBaserunners(GameEvent curr)
 		{
 			// Just list all the baserunners we're tracking
 			List<GameEventBaseRunner> runners = new List<GameEventBaseRunner>();
@@ -283,10 +283,10 @@ namespace Rescorer
 				}
 			}
 
-			copyRunnersToEvent(curr, runners);
+			CopyRunnersToEvent(curr, runners);
 		}
 
-		public void handleWalk(GameEvent curr)
+		public void HandleWalk(GameEvent curr)
 		{
 			Baserunner[] newBases = new Baserunner[4];
 			Baserunner scored = null;
@@ -337,15 +337,15 @@ namespace Rescorer
 			if (scored != null)
 			{
 				runners.Add(CreateGebr(scored.playerId, scored.pitcherId, 3, 4));
-				incrementScore();
+				IncrementScore();
 			}
 
-			copyRunnersToEvent(curr, runners);
+			CopyRunnersToEvent(curr, runners);
 
-			putBatterOnBase(curr, 1);
+			PutBatterOnBase(curr, 1);
 		}
 
-		public void handleFieldersChoice(GameEvent curr)
+		public void HandleFieldersChoice(GameEvent curr)
 		{
 			// Figure out who's out
 			Baserunner whosOut = null;
@@ -366,7 +366,7 @@ namespace Rescorer
 			}
 			else
 			{
-				curr.eventType = "OUT";
+				curr.eventType = GameEventType.OUT;
 			}
 
 			Baserunner scored = null;
@@ -399,36 +399,36 @@ namespace Rescorer
 			{
 				// Only scoring from 3rd on fielder's choice
 				runners.Add(CreateGebr(scored.playerId, scored.pitcherId, 3, 4));
-				incrementScore();
+				IncrementScore();
 			}
-			copyRunnersToEvent(curr, runners);
+			CopyRunnersToEvent(curr, runners);
 
 			// Make sure there's an out on this play
 			curr.outsOnPlay = 1;
 		}
 
 		// Handle hits and track baserunners
-		private void handleHit(GameEvent curr)
+		private void HandleHit(GameEvent curr)
 		{
 			// TODO: handle steals
 			switch (curr.basesHit)
 			{
 				case 4:
-					handleHomerun(curr);
+					HandleHomerun(curr);
 					break;
 				case 3:
-					handleTriple(curr);
+					HandleTriple(curr);
 					break;
 				case 2:
-					handleDouble(curr);
+					HandleDouble(curr);
 					break;
 				case 1:
-					handleSingle(curr);
+					HandleSingle(curr);
 					break;
 			}
 		}
 
-		private void handleOuts(GameEvent curr)
+		private void HandleOuts(GameEvent curr)
 		{
 			// TODO: use battedBallType once it's available
 			// If the batter grounds out, runners advance
@@ -446,7 +446,7 @@ namespace Rescorer
 				if (scored != null && curr.outsBeforePlay < 2)
 				{
 					runners.Add(CreateGebr(scored.playerId, scored.pitcherId, 3, 4));
-					incrementScore();
+					IncrementScore();
 				}
 
 				for (int i = 1; i < 4; i++)
@@ -456,7 +456,7 @@ namespace Rescorer
 						runners.Add(CreateGebr(m_bases[i].playerId, m_bases[i].pitcherId, i - 1, i));
 					}
 				}
-				copyRunnersToEvent(curr, runners);
+				CopyRunnersToEvent(curr, runners);
 			}
 			else if (curr.isSacrificeHit || curr.isSacrificeFly || curr.eventText.Any(x => x.Contains("sacrifice") || x.Contains("flyout")))
 			{
@@ -471,7 +471,7 @@ namespace Rescorer
 					if (scored != null)
 					{
 						runners.Add(CreateGebr(scored.playerId, scored.pitcherId, 3, 4));
-						incrementScore();
+						IncrementScore();
 					}
 
 					// Third came from 2nd
@@ -486,18 +486,18 @@ namespace Rescorer
 						runners.Add(CreateGebr(m_bases[1].playerId, m_bases[1].pitcherId, 1, 1));
 					}
 
-					copyRunnersToEvent(curr, runners);
+					CopyRunnersToEvent(curr, runners);
 				}
 			}
 			else
 			{
 				// Persist our baserunners for any other kind of out
-				persistBaserunners(curr);
+				PersistBaserunners(curr);
 			}
 
 		}
 
-		private void storeEventBaserunners(GameEvent curr)
+		private void StoreEventBaserunners(GameEvent curr)
 		{
 			m_bases[1] = null;
 			m_bases[2] = null;
@@ -550,7 +550,7 @@ namespace Rescorer
 				if (curr.totalStrikes >= 3 && curr.eventType != GameEventType.STRIKEOUT)
 				{
 					var oldEventType = curr.eventType;
-					if (isStrikeout(curr.RealPitches))
+					if (IsStrikeout(curr.RealPitches))
 					{
 						curr.eventType = GameEventType.STRIKEOUT;
 						curr.totalStrikes = 3;
@@ -577,19 +577,19 @@ namespace Rescorer
 					switch (curr.eventType)
 					{
 						case GameEventType.FIELDERS_CHOICE:
-							handleFieldersChoice(curr);
+							HandleFieldersChoice(curr);
 							break;
 						case GameEventType.WALK:
-							handleWalk(curr);
+							HandleWalk(curr);
 							break;
 						case GameEventType.OUT:
-							handleOuts(curr);
+							HandleOuts(curr);
 							break;
 						case GameEventType.HOME_RUN:
 						case GameEventType.TRIPLE:
 						case GameEventType.DOUBLE:
 						case GameEventType.SINGLE:
-							handleHit(curr);
+							HandleHit(curr);
 							break;
 						default:
 							break;
@@ -597,7 +597,7 @@ namespace Rescorer
 
 					// TODO check for double play validity?
 					// Now increment the outs and/or innings
-					var inningEnded = addOuts(curr.outsOnPlay);
+					var inningEnded = AddOuts(curr.outsOnPlay);
 
 					// BOOO this is actually matching lousy behavior in Cauldron, somebody should really fix that:/
 					//if (inningEnded)
@@ -608,7 +608,7 @@ namespace Rescorer
 				else
 				{
 					// Store the event's baserunners (post-play state) locally since we're still in reality
-					storeEventBaserunners(curr);
+					StoreEventBaserunners(curr);
 				}
 			}
 

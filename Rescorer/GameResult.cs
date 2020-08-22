@@ -82,10 +82,13 @@ namespace Rescorer
 		public int NewHomeStrikeouts { get; set; }
 		public int NewAwayStrikeouts { get; set; }
 
-		public GameResult(IEnumerable<GameEvent> events, int awayScore, int homeScore)
+		public int DroppedAppearances { get; set; }
+
+		public GameResult(IEnumerable<GameEvent> events, int awayScore, int homeScore, int dropped)
 		{
 			OldAwayScore = awayScore;
 			OldHomeScore = homeScore;
+			DroppedAppearances = dropped;
 
 			GameId = events.First().gameId;
 			NewAwayScore = (int)events.Last().awayScore;
