@@ -18,6 +18,8 @@ namespace Rescorer
 		string m_outputFolderName;
 
 		Dictionary<string, Tuple<float, float>> m_singleAdvance;
+		Dictionary<string, Tuple<int, float, float>> m_groundOutAdvance;
+		Dictionary<string, Tuple<int, float, float>> m_flyOutAdvance;
 
 		public IEnumerable<GameResult> Results => m_gameResults;
 		List<GameResult> m_gameResults;
@@ -25,7 +27,10 @@ namespace Rescorer
 		public IDictionary<string, Record> RecordAdjustments => m_recordAdjustments;
 		Dictionary<string, Record> m_recordAdjustments;
 
-		public Processor(string outputFolder, Dictionary<string, Tuple<float,float>> singleAdvance)
+		public Processor(string outputFolder, 
+			Dictionary<string, Tuple<float,float>> singleAdvance,
+			Dictionary<string, Tuple<int, float, float>> groundOutAdvance,
+			Dictionary<string, Tuple<int, float, float>> flyOutAdvance)
 		{
 			m_client = new HttpClient();
 			m_client.BaseAddress = new Uri("http://api.blaseball-reference.com/v1/");
@@ -36,6 +41,8 @@ namespace Rescorer
 			m_outputFolderName = outputFolder;
 
 			m_singleAdvance = singleAdvance;
+			m_groundOutAdvance = groundOutAdvance;
+			m_flyOutAdvance = flyOutAdvance;
 
 			m_gameResults = new List<GameResult>();
 			m_recordAdjustments = new Dictionary<string, Record>();
@@ -235,7 +242,7 @@ namespace Rescorer
 			#endregion
 
 			// ACTUALLY DO THE RESCORING
-			FourthStrikeAnalyzer fsa = new FourthStrikeAnalyzer(m_singleAdvance);
+			FourthStrikeAnalyzer fsa = new FourthStrikeAnalyzer(m_singleAdvance, m_groundOutAdvance, m_flyOutAdvance);
 			var analyzerResults = fsa.RescoreGame(sorted);
 
 			Console.WriteLine($"Game {gameId} had {analyzerResults.numNewStrikeouts} new strikeouts.");

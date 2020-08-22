@@ -24,10 +24,12 @@ namespace Rescorer
 
 
 		AnalyzerResult m_result;
-		public FourthStrikeAnalyzer(Dictionary<string, Tuple<float,float>> singleAdvance)
+		public FourthStrikeAnalyzer(Dictionary<string, Tuple<float,float>> singleAdvance,
+			Dictionary<string, Tuple<int, float, float>> groundOutAdvance,
+			Dictionary<string, Tuple<int, float, float>> flyOutAdvance)
 		{
-			m_home = new SingleTeamFourthStrikeAnalyzer(true, singleAdvance);
-			m_away = new SingleTeamFourthStrikeAnalyzer(false, singleAdvance);
+			m_home = new SingleTeamFourthStrikeAnalyzer(true, singleAdvance, groundOutAdvance, flyOutAdvance);
+			m_away = new SingleTeamFourthStrikeAnalyzer(false, singleAdvance, groundOutAdvance, flyOutAdvance);
 			m_result = new AnalyzerResult();
 		}
 

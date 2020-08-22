@@ -7,12 +7,12 @@ namespace Rescorer
 {
 	class Baserunner
 	{
-		public string playerId { get; set; }
+		public string runnerId { get; set; }
 		public string pitcherId { get; set; }
 
 		public Baserunner(string runner, string pitcher)
 		{
-			playerId = runner;
+			runnerId = runner;
 			pitcherId = pitcher;
 		}
 	}
@@ -34,14 +34,22 @@ namespace Rescorer
 		static bool s_allowRealityChanges = false;
 		
 		Dictionary<string, Tuple<float, float>> m_singleAdvance;
+		Dictionary<string, Tuple<int, float, float>> m_groundOutAdvance;
+		Dictionary<string, Tuple<int, float, float>> m_flyOutAdvance;
 
 		Random m_random;
 
-		public SingleTeamFourthStrikeAnalyzer(bool isHome, Dictionary<string, Tuple<float,float>> singleAdvance)
+		public SingleTeamFourthStrikeAnalyzer(
+			bool isHome, 
+			Dictionary<string, Tuple<float,float>> singleAdvance,
+			Dictionary<string, Tuple<int, float, float>> groundOutAdvance,
+			Dictionary<string, Tuple<int, float, float>> flyOutAdvance)
 		{
 			// TODO: pass in seed
 			m_random = new Random(0);
 			m_singleAdvance = singleAdvance;
+			m_groundOutAdvance = groundOutAdvance;
+			m_flyOutAdvance = flyOutAdvance;
 			m_inning = 0;
 			m_outs = 0;
 			m_bases = new Baserunner[4];
@@ -50,7 +58,38 @@ namespace Rescorer
 			m_result = new AnalyzerResult();
 		}
 
-		private int getSingleAdvanceFromFirst(string runnerId)
+		static int GROUNDOUT_ATTEMPTS = 10;
+		static int FLYOUT_ATTEMPTS = 12;
+		private int GetGroundOutAdvance(string runnerId) => GetTagupAdvance(m_groundOutAdvance, runnerId, GROUNDOUT_ATTEMPTS);
+		private int GetFlyOutAdvance(string runnerId) => GetTagupAdvance(m_flyOutAdvance, runnerId, FLYOUT_ATTEMPTS);
+		private int GetTagupAdvance(Dictionary<string, Tuple<int, float, float>> advance, string runnerId, int min)
+		{
+			Tuple<int, float, float> odds;
+			if(advance.TryGetValue(runnerId, out odds))
+			{
+				// Do nothing
+			}
+			else
+			{
+				odds = advance[""];
+			}
+
+			if(odds.Item1 < min)
+			{
+				odds = advance[""];
+			}
+
+			if(m_random.Next(0,100) < odds.Item2 * 100)
+			{
+				return 0;
+			}
+			else
+			{
+				return 1;
+			}
+		}
+
+		private int GetSingleAdvanceFromFirst(string runnerId)
 		{
 			Tuple<float, float> odds;
 			if (m_singleAdvance.TryGetValue(runnerId, out odds))
@@ -170,7 +209,7 @@ namespace Rescorer
 			{
 				if (m_bases[i] != null)
 				{
-					var geb = CreateGebr(m_bases[i].playerId, m_bases[i].pitcherId, i, 4);
+					var geb = CreateGebr(m_bases[i].runnerId, m_bases[i].pitcherId, i, 4);
 					runners.Add(geb);
 					IncrementScore();
 				}
@@ -193,7 +232,7 @@ namespace Rescorer
 			{
 				if (m_bases[i] != null)
 				{
-					var geb = CreateGebr(m_bases[i].playerId, m_bases[i].pitcherId, i, 4);
+					var geb = CreateGebr(m_bases[i].runnerId, m_bases[i].pitcherId, i, 4);
 					runners.Add(geb);
 					IncrementScore();
 				}
@@ -215,7 +254,7 @@ namespace Rescorer
 			{
 				if (m_bases[i] != null)
 				{
-					var geb = CreateGebr(m_bases[i].playerId, m_bases[i].pitcherId, i, 4);
+					var geb = CreateGebr(m_bases[i].runnerId, m_bases[i].pitcherId, i, 4);
 					runners.Add(geb);
 					IncrementScore();
 				}
@@ -237,7 +276,7 @@ namespace Rescorer
 			{
 				if (m_bases[i] != null)
 				{
-					var geb = CreateGebr(m_bases[i].playerId, m_bases[i].pitcherId, i, 4);
+					var geb = CreateGebr(m_bases[i].runnerId, m_bases[i].pitcherId, i, 4);
 					runners.Add(geb);
 					IncrementScore();
 				}
@@ -248,8 +287,8 @@ namespace Rescorer
 			if (m_bases[1] != null)
 			{
 				// Find new base for guy on first and put him there
-				int newBase = 1 + getSingleAdvanceFromFirst(m_bases[1].playerId);
-				var whosOnFirst = CreateGebr(m_bases[1].playerId, m_bases[1].pitcherId, 1, newBase);
+				int newBase = 1 + GetSingleAdvanceFromFirst(m_bases[1].runnerId);
+				var whosOnFirst = CreateGebr(m_bases[1].runnerId, m_bases[1].pitcherId, 1, newBase);
 				runners.Add(whosOnFirst);
 
 				if (newBase == 4)
@@ -278,7 +317,7 @@ namespace Rescorer
 			{
 				if (m_bases[i] != null)
 				{
-					var geb = CreateGebr(m_bases[i].playerId, m_bases[i].pitcherId, i, i);
+					var geb = CreateGebr(m_bases[i].runnerId, m_bases[i].pitcherId, i, i);
 					runners.Add(geb);
 				}
 			}
@@ -329,14 +368,14 @@ namespace Rescorer
 			{
 				if (newBases[i] != null)
 				{
-					runners.Add(CreateGebr(newBases[i].playerId, newBases[i].pitcherId, prevBases[i], i));
+					runners.Add(CreateGebr(newBases[i].runnerId, newBases[i].pitcherId, prevBases[i], i));
 				}
 
 				m_bases[i] = newBases[i];
 			}
 			if (scored != null)
 			{
-				runners.Add(CreateGebr(scored.playerId, scored.pitcherId, 3, 4));
+				runners.Add(CreateGebr(scored.runnerId, scored.pitcherId, 3, 4));
 				IncrementScore();
 			}
 
@@ -391,14 +430,14 @@ namespace Rescorer
 			{
 				if (m_bases[i] != null)
 				{
-					var gebr = CreateGebr(m_bases[i].playerId, m_bases[i].pitcherId, i - 1, i);
+					var gebr = CreateGebr(m_bases[i].runnerId, m_bases[i].pitcherId, i - 1, i);
 					runners.Add(gebr);
 				}
 			}
 			if (scored != null)
 			{
 				// Only scoring from 3rd on fielder's choice
-				runners.Add(CreateGebr(scored.playerId, scored.pitcherId, 3, 4));
+				runners.Add(CreateGebr(scored.runnerId, scored.pitcherId, 3, 4));
 				IncrementScore();
 			}
 			CopyRunnersToEvent(curr, runners);
@@ -432,58 +471,109 @@ namespace Rescorer
 		{
 			// TODO: use battedBallType once it's available
 			// If the batter grounds out, runners advance
-			// TODO: More sophisticated per-runner simulation of who advances on fly/ground outs
 			if (curr.eventText.Any(x => x.Contains("ground out")))
-			{
-				List<GameEventBaseRunner> runners = new List<GameEventBaseRunner>();
-
-				Baserunner scored = m_bases[3];
-				m_bases[3] = m_bases[2];
-				m_bases[2] = m_bases[1];
-				m_bases[1] = null;
-
-				// Guy on 3rd scores if less than 2 outs
-				if (scored != null && curr.outsBeforePlay < 2)
-				{
-					runners.Add(CreateGebr(scored.playerId, scored.pitcherId, 3, 4));
-					IncrementScore();
-				}
-
-				for (int i = 1; i < 4; i++)
-				{
-					if (m_bases[i] != null)
-					{
-						runners.Add(CreateGebr(m_bases[i].playerId, m_bases[i].pitcherId, i - 1, i));
-					}
-				}
-				CopyRunnersToEvent(curr, runners);
-			}
-			else if (curr.isSacrificeHit || curr.isSacrificeFly || curr.eventText.Any(x => x.Contains("sacrifice") || x.Contains("flyout")))
 			{
 				if (curr.outsBeforePlay < 2)
 				{
 					List<GameEventBaseRunner> runners = new List<GameEventBaseRunner>();
-					// On a sac or flyout with less than 2 outs, runners on 2nd and 3rd advance
-					Baserunner scored = m_bases[3];
-					m_bases[3] = m_bases[2];
-					m_bases[2] = null;
 
-					if (scored != null)
+					// Does guy on 3rd score?
+					if (m_bases[3] != null)
 					{
-						runners.Add(CreateGebr(scored.playerId, scored.pitcherId, 3, 4));
-						IncrementScore();
+						int advance = GetGroundOutAdvance(m_bases[3].runnerId);
+						runners.Add(CreateGebr(m_bases[3].runnerId, m_bases[3].pitcherId, 3, 3 + advance));
+						if (advance == 1)
+						{
+							m_bases[3] = null;
+							IncrementScore();
+						}
 					}
 
-					// Third came from 2nd
-					if(m_bases[3] != null)
+					// Does guy on 2nd move to 3rd (if he can)?
+					if(m_bases[2] != null)
 					{
-						runners.Add(CreateGebr(m_bases[3].playerId, m_bases[3].pitcherId, 2, 3));
+						int advance = GetGroundOutAdvance(m_bases[2].runnerId);
+						if(advance == 1 && m_bases[3] == null)
+						{
+							runners.Add(CreateGebr(m_bases[2].runnerId, m_bases[2].pitcherId, 2, 3));
+							m_bases[3] = m_bases[2];
+							m_bases[2] = null;
+						}
+						else
+						{ 
+							runners.Add(CreateGebr(m_bases[2].runnerId, m_bases[2].pitcherId, 2, 2));
+						}
 					}
 
-					// First stayed on first
+					// Does guy on 1st move to 2nd (if he can)?
 					if (m_bases[1] != null)
 					{
-						runners.Add(CreateGebr(m_bases[1].playerId, m_bases[1].pitcherId, 1, 1));
+						int advance = GetGroundOutAdvance(m_bases[1].runnerId);
+						if (advance == 1 && m_bases[2] == null)
+						{
+							runners.Add(CreateGebr(m_bases[1].runnerId, m_bases[1].pitcherId, 1, 2));
+							m_bases[2] = m_bases[1];
+							m_bases[1] = null;
+						}
+						else
+						{
+							runners.Add(CreateGebr(m_bases[1].runnerId, m_bases[1].pitcherId, 1, 1));
+						}
+					}
+
+					CopyRunnersToEvent(curr, runners);
+				}
+
+			}
+			else if (curr.isSacrificeHit || curr.isSacrificeFly || curr.eventText.Any(x => x.Contains("sacrifice") || x.Contains("flyout")))
+			{
+
+				// Possible TODO: Does the runner on 3rd always score on a SACRIFICE as compared to a normal fly out
+				if (curr.outsBeforePlay < 2)
+				{
+					List<GameEventBaseRunner> runners = new List<GameEventBaseRunner>();
+					// Does guy on 3rd score?
+					if (m_bases[3] != null)
+					{
+						int advance = GetFlyOutAdvance(m_bases[3].runnerId);
+						runners.Add(CreateGebr(m_bases[3].runnerId, m_bases[3].pitcherId, 3, 3 + advance));
+						if (advance == 1)
+						{
+							m_bases[3] = null;
+							IncrementScore();
+						}
+					}
+
+					// Does guy on 2nd move to 3rd (if he can)?
+					if(m_bases[2] != null)
+					{
+						int advance = GetFlyOutAdvance(m_bases[2].runnerId);
+						if(advance == 1 && m_bases[3] == null)
+						{
+							runners.Add(CreateGebr(m_bases[2].runnerId, m_bases[2].pitcherId, 2, 3));
+							m_bases[3] = m_bases[2];
+							m_bases[2] = null;
+						}
+						else
+						{ 
+							runners.Add(CreateGebr(m_bases[2].runnerId, m_bases[2].pitcherId, 2, 2));
+						}
+					}
+
+					// Does guy on 1st move to 2nd (if he can)?
+					if (m_bases[1] != null)
+					{
+						int advance = GetFlyOutAdvance(m_bases[1].runnerId);
+						if (advance == 1 && m_bases[2] == null)
+						{
+							runners.Add(CreateGebr(m_bases[1].runnerId, m_bases[1].pitcherId, 1, 2));
+							m_bases[2] = m_bases[1];
+							m_bases[1] = null;
+						}
+						else
+						{
+							runners.Add(CreateGebr(m_bases[1].runnerId, m_bases[1].pitcherId, 1, 1));
+						}
 					}
 
 					CopyRunnersToEvent(curr, runners);

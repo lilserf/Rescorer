@@ -33,15 +33,16 @@ namespace Rescorer
 			string gameListFile = args[0];
 			string outputFolder = args[1];
 			string singleAdvanceFile = args[2];
+			string groundOutAdvanceFile = args[3];
+			string flyOutAdvanceFile = args[4];
 			string jsonFile = null;
-			if(args.Length > 3)
+			if(args.Length > 5)
 			{
-				jsonFile = args[3];
+				jsonFile = args[5];
 			}
 
 			// Load the single-advance stats
 			Dictionary<string, Tuple<float, float>> singleAdvance = new Dictionary<string, Tuple<float, float>>();
-
 			using (StreamReader reader = new StreamReader(singleAdvanceFile))
 			{
 				while (!reader.EndOfStream)
@@ -51,7 +52,26 @@ namespace Rescorer
 				}
 			}
 
-			Processor p = new Processor(outputFolder, singleAdvance);
+			Dictionary<string, Tuple<int, float, float>> groundOutAdvance = new Dictionary<string, Tuple<int, float, float>>();
+			using (StreamReader reader = new StreamReader(groundOutAdvanceFile))
+			{
+				while (!reader.EndOfStream)
+				{
+					string[] line = reader.ReadLine().Split('\t');
+					groundOutAdvance[line[0]] = new Tuple<int, float, float>(int.Parse(line[1]), float.Parse(line[2]), float.Parse(line[3]));
+				}
+			}
+
+			Dictionary<string, Tuple<int, float, float>> flyOutAdvance = new Dictionary<string, Tuple<int, float, float>>();
+			using (StreamReader reader = new StreamReader(flyOutAdvanceFile))
+			{
+				while (!reader.EndOfStream)
+				{
+					string[] line = reader.ReadLine().Split('\t');
+					flyOutAdvance[line[0]] = new Tuple<int, float, float>(int.Parse(line[1]), float.Parse(line[2]), float.Parse(line[3]));
+				}
+			}
+			Processor p = new Processor(outputFolder, singleAdvance, groundOutAdvance, flyOutAdvance);
 
 			if (jsonFile != null)
 			{
@@ -101,7 +121,7 @@ namespace Rescorer
 			teamLookup["747b8e4a-7e50-4638-a973-ea7950a3e739"] = new TeamRecord("Hades Tigers", 70, 29);
 			teamLookup["eb67ae5e-c4bf-46ca-bbbc-425cd34182ff"] = new TeamRecord("Canada Moist Talkers", 53, 46);
 			teamLookup["9debc64f-74b7-4ae1-a4d6-fce0144b6ea5"] = new TeamRecord("Houston Spies", 49, 50);
-			teamLookup["b63be8c2-576a-4d6e-8daf-814f8bcea96f"] = new TeamRecord("Miami Dalé", 40, 59);
+			teamLookup["b63be8c2-576a-4d6e-8daf-814f8bcea96f"] = new TeamRecord("Miami Dal&eacute;", 40, 59);
 			teamLookup["105bc3ff-1320-4e37-8ef0-8d595cb95dd0"] = new TeamRecord("Seattle Garages", 48, 51);
 			teamLookup["a37f9158-7f82-46bc-908c-c9e2dda7c33b"] = new TeamRecord("Breckenridge Jazz Hands", 50, 49);
 

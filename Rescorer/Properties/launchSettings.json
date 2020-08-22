@@ -2,7 +2,7 @@
   "profiles": {
     "Rescorer": {
       "commandName": "Project",
-      "commandLineArgs": "D:\\Projects\\blaseball\\fourth-strike-results\\all-fourth-strike-games.txt D:\\Projects\\blaseball\\fourth-strike-results\\all-games D:\\Projects\\blaseball\\fourth-strike-results\\single-advance.txt D:\\Projects\\blaseball\\fourth-strike-results\\s3-1.4.0-filtered-allgames.sibr"
+      "commandLineArgs": "D:\\Projects\\blaseball\\fourth-strike-results\\all-fourth-strike-games.txt D:\\Projects\\blaseball\\fourth-strike-results\\all-games D:\\Projects\\blaseball\\fourth-strike-results\\single-advance.txt D:\\Projects\\blaseball\\fourth-strike-results\\groundout-advance.txt D:\\Projects\\blaseball\\fourth-strike-results\\flyout-advance.txt D:\\Projects\\blaseball\\fourth-strike-results\\s3-1.4.0-filtered-allgames.sibr"
     }
   }
 }
