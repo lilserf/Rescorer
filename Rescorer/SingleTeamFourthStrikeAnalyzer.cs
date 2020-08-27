@@ -650,6 +650,12 @@ namespace Rescorer
 						curr.outsOnPlay = 1;
 						curr.rescoreNewStrikeout = true;
 						m_result.numNewStrikeouts++;
+						m_result.eventTypesChangedToStrikeouts.Add(oldEventType);
+						m_result.statistics.AddStat(curr.pitcherId, "STRIKEOUT-pitched", 1);
+						m_result.statistics.AddStat(curr.batterId, "STRIKEOUT-batted", 1);
+						// Subtract whatever was before
+						m_result.statistics.AddStat(curr.pitcherId, oldEventType+"-pitched", -1);
+						m_result.statistics.AddStat(curr.batterId, oldEventType+"-batted", -1);
 
 						// If this event was already an OUT, we're still "in sync" with reality
 						// So we can track the new strikeout and add a K to that pitcher or whatever

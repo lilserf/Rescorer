@@ -8,13 +8,33 @@ namespace Rescorer
 
 	class AnalyzerResult
 	{
+		public Statistics statistics { get; private set; }
 		public IEnumerable<GameEvent> newEvents { get; set; }
 
 		public int numNewStrikeouts { get; set; }
+		public List<string> eventTypesChangedToStrikeouts { get; private set; }
 
+		public AnalyzerResult()
+		{
+			eventTypesChangedToStrikeouts = new List<string>();
+			statistics = new Statistics();
+		}
+
+		public void MergeStats(AnalyzerResult other)
+		{
+			numNewStrikeouts += other.numNewStrikeouts;
+			eventTypesChangedToStrikeouts.Concat(other.eventTypesChangedToStrikeouts);
+			numDroppedAppearances += other.numDroppedAppearances;
+			statistics.Merge(other.statistics);
+		}
+
+		// Only used by outer FourthStrikeAnalyzer
 		public int numDroppedAppearances { get; set; }
 
+		// Only used by outer FourthStrikeAnalyzer
 		public bool outcomeUnknown { get; set; }
+
+
 	}
 
 	class FourthStrikeAnalyzer
@@ -119,8 +139,10 @@ namespace Rescorer
 				}
 			}
 
+			m_result.MergeStats(newHomeResult);
+			m_result.MergeStats(newAwayResult);
 
-			if(gameOver)
+			if (gameOver)
 			{
 				var dropped = combined.Where(x => x.inning > inning || (top && x.inning == inning && !x.topOfInning));
 				m_result.numDroppedAppearances = dropped.Count();
@@ -131,7 +153,6 @@ namespace Rescorer
 				m_result.outcomeUnknown = true;
 			}
 
-			m_result.numNewStrikeouts = newHomeResult.numNewStrikeouts + newAwayResult.numNewStrikeouts;
 			m_result.newEvents = combined;
 			return m_result;
 		}

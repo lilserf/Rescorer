@@ -2,6 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace Rescorer
 {
@@ -22,13 +26,42 @@ namespace Rescorer
 		}
 	}
 
+	class Player
+	{
+		public string Name { get; set; }
+	}
+
 	class Program
 	{
 		//static string testGame = "005a2ae5-1727-44f8-88c1-d24e17e1582b";
 		static string testGame = null;
 
-		static void Main(string[] args)
+		static HttpClient s_client;
+		public static async Task<Player> FetchPlayer(string playerId)
 		{
+			HttpResponseMessage response = await s_client.GetAsync($"players?ids={playerId}");
+
+			if (response.IsSuccessStatusCode)
+			{
+				string strResponse = await response.Content.ReadAsStringAsync();
+
+				IEnumerable<Player> r = JsonSerializer.Deserialize<IEnumerable<Player>>(strResponse, new JsonSerializerOptions() { PropertyNamingPolicy = new SnakeCaseNamingPolicy() });
+				return r.FirstOrDefault();
+			}
+			else
+			{
+				return null;
+			}
+		}
+
+		static async Task Main(string[] args)
+		{
+			s_client = new HttpClient();
+			s_client.BaseAddress = new Uri("https://www.blaseball.com/database/");
+			s_client.DefaultRequestHeaders.Accept.Clear();
+			s_client.DefaultRequestHeaders.Accept.Add(
+				new MediaTypeWithQualityHeaderValue("application/json"));
+
 
 			string gameListFile = args[0];
 			string outputFolder = args[1];
@@ -103,6 +136,13 @@ namespace Rescorer
 				}
 			}
 
+			Statistics totalStats = new Statistics();
+			foreach(var s in p.Results)
+			{
+				totalStats.Merge(s.Stats);
+			}
+
+
 			Dictionary<string, TeamRecord> teamLookup = new Dictionary<string, TeamRecord>();
 			teamLookup["b72f3061-f573-40d7-832a-5ad475bd7909"] = new TeamRecord("San Francisco Lovers", 59, 40);
 			teamLookup["878c1bf6-0d21-4659-bfee-916c8314d69c"] = new TeamRecord("Unlimited Tacos", 38, 62);
@@ -124,6 +164,40 @@ namespace Rescorer
 			teamLookup["b63be8c2-576a-4d6e-8daf-814f8bcea96f"] = new TeamRecord("Miami Dal&eacute;", 40, 59);
 			teamLookup["105bc3ff-1320-4e37-8ef0-8d595cb95dd0"] = new TeamRecord("Seattle Garages", 48, 51);
 			teamLookup["a37f9158-7f82-46bc-908c-c9e2dda7c33b"] = new TeamRecord("Breckenridge Jazz Hands", 50, 49);
+
+			using (StreamWriter page = new StreamWriter($"{outputFolder}/playerStats.html"))
+			{
+				page.WriteLine("<html><head><link rel=\"stylesheet\" href=\"style.css\"/></head><body>");
+				// Individual stats
+				page.WriteLine("<div class=summary>Pitching Stats");
+				page.WriteLine("<table class=stats>");
+				page.WriteLine("<tr><th>Player ID</th><th>Player</th><th>Stat</th><th>Change</th></tr>");
+				foreach (var entry in totalStats.PlayerStats)
+				{
+					Player player = await FetchPlayer(entry.Key);
+					foreach (var stat in entry.Value.Stats.Where(x => x.Key.Contains("pitched")))
+					{
+						string statName = stat.Key.Substring(0, stat.Key.LastIndexOf('-'));
+						page.WriteLine($"<tr><td>{entry.Key}</td><td>{player.Name}</td><td>{statName}</td><td>{stat.Value:+0;-#}</td></tr>");
+					}
+				}
+				page.WriteLine("</table></div>");
+
+				page.WriteLine("<div class=summary>Batting Stats");
+				page.WriteLine("<table class=stats>");
+				page.WriteLine("<tr><th>Player ID</th><th>Player</th><th>Stat</th><th>Change</th></tr>");
+				foreach (var entry in totalStats.PlayerStats)
+				{
+					Player player = await FetchPlayer(entry.Key);
+					foreach (var stat in entry.Value.Stats.Where(x => x.Key.Contains("batted")))
+					{
+						string statName = stat.Key.Substring(0, stat.Key.LastIndexOf('-'));
+						page.WriteLine($"<tr><td>{entry.Key}</td><td>{player.Name}</td><td>{statName}</td><td>{stat.Value:+0;-#}</td></tr>");
+					}
+				}
+				page.WriteLine("</table></div>");
+				page.WriteLine("</body></html>");
+			}
 
 			// Produce index.html
 			using (StreamWriter index = new StreamWriter($"{outputFolder}/index.html"))

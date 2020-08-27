@@ -149,6 +149,8 @@ namespace Rescorer
 
 		public int DroppedAppearances { get; set; }
 
+		public Statistics Stats { get; private set; }
+
 		public GameResult(IEnumerable<GameEvent> events, int awayScore, int homeScore, int dropped)
 		{
 			OldAwayScore = awayScore;
@@ -165,6 +167,8 @@ namespace Rescorer
 			// Strikeouts for home team happen in top of inning when away is batting
 			NewHomeStrikeouts = events.Where(x => x.topOfInning == true).Sum(x => x.rescoreNewStrikeout ? 1 : 0);
 			NewAwayStrikeouts = events.Where(x => x.topOfInning == false).Sum(x => x.rescoreNewStrikeout ? 1 : 0);
+
+			Stats = new Statistics();
 		}
 	}
 }

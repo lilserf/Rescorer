@@ -273,6 +273,7 @@ namespace Rescorer
 			}
 
 			GameResult result = new GameResult(newEvents, awayBefore, homeBefore, analyzerResults.numDroppedAppearances);
+			result.Stats.Merge(analyzerResults.statistics);
 
 			m_gameResults.Add(result);
 
